@@ -254,6 +254,151 @@ public static class EncounterExtensions
                     Outcomes = [new FlavorOutcome("Hopped past.")],
                 },
             ]),
+
+            [Encounter.GlowingMushrooms] = new("Glowing Mushrooms", [
+                new EncounterOption
+                {
+                    Label = "Ignore",
+                    Kind = OptionKind.Ignore,
+                    Outcomes = [new FlavorOutcome("Hopped past.")],
+                },
+            ]),
+
+            [Encounter.GiantBat] = new("Giant Bat", [
+                new EncounterOption
+                {
+                    Label = "Intimidate",
+                    Kind = OptionKind.Engage,
+                    Outcomes =
+                    [
+                        new FlavorOutcome("Bat flew off."),
+                        new EndAdventureOutcome("Rebuffed. Home."),
+                    ],
+                },
+                new EncounterOption
+                {
+                    Label = "Sneak around",
+                    Kind = OptionKind.Ignore,
+                    Outcomes =
+                    [
+                        new FlavorOutcome("Slipped past."),
+                        new FlavorOutcome("Spotted! Ran past."),
+                        new EndAdventureOutcome("Caught! Home."),
+                    ],
+                },
+                new EncounterOption
+                {
+                    Label = "Retreat",
+                    Kind = OptionKind.Retreat,
+                    Outcomes = [new EndAdventureOutcome("Flapped home!")],
+                },
+            ]),
+
+            [Encounter.LargeBoulder] = new("Large Boulder", [
+                new EncounterOption
+                {
+                    Label = "Move",
+                    Kind = OptionKind.Engage,
+                    Outcomes =
+                    [
+                        new FlavorOutcome("Too heavy."),
+                        new FlavorOutcome("Shoved it past!"),
+                    ],
+                },
+                new EncounterOption
+                {
+                    Label = "Ignore",
+                    Kind = OptionKind.Ignore,
+                    Outcomes = [new FlavorOutcome("Hopped past.")],
+                },
+            ]),
+
+            [Encounter.CarnivorousPlant] = new("Carnivorous Plant", [
+                new EncounterOption
+                {
+                    Label = "Ignore",
+                    Kind = OptionKind.Ignore,
+                    Outcomes = [new FlavorOutcome("Hopped past.")],
+                },
+                new EncounterOption
+                {
+                    Label = "Look inside",
+                    Kind = OptionKind.Engage,
+                    Outcomes =
+                    [
+                        new EndAdventureOutcome("Chomped! Home."),
+                        new FlavorOutcome("Saved a butterfly!"),
+                    ],
+                },
+            ]),
+
+            [Encounter.Quicksand] = new("Quicksand", [
+                new EncounterOption
+                {
+                    Label = "Get out!",
+                    Kind = OptionKind.Engage,
+                    Outcomes =
+                    [
+                        new FlavorOutcome("Wriggled free."),
+                        new EndAdventureOutcome("Exhausted. Home."),
+                    ],
+                },
+            ]),
+
+            [Encounter.NanerTree] = new("Naner Tree", [
+                new EncounterOption
+                {
+                    Label = "Climb",
+                    Kind = OptionKind.Engage,
+                    Outcomes =
+                    [
+                        new FlavorOutcome("Naners! Tasty!"),
+                        new SubstituteOutcome("A Naner Bird!", Encounter.NanerBird),
+                    ],
+                },
+                new EncounterOption
+                {
+                    Label = "Ignore",
+                    Kind = OptionKind.Ignore,
+                    Outcomes = [new FlavorOutcome("Hopped past.")],
+                },
+            ]),
+
+            [Encounter.NanerBird] = new("Naner Bird", [
+                new EncounterOption
+                {
+                    Label = "Listen",
+                    Kind = OptionKind.Engage,
+                    Outcomes = [new FlavorOutcome("Words made no sense.")],
+                },
+                new EncounterOption
+                {
+                    Label = "Ignore",
+                    Kind = OptionKind.Ignore,
+                    Outcomes = [new FlavorOutcome("Ate naners. Tasty!")],
+                },
+            ]),
+
+            [Encounter.LongAbandonedVillage] = new("Abandoned Village", [
+                new EncounterOption
+                {
+                    Label = "Explore",
+                    Kind = OptionKind.Engage,
+                    Outcomes =
+                    [
+                        new FlavorOutcome("Weird machines!"),
+                        new SubstituteOutcome("Quicksand!", Encounter.Quicksand),
+                        new SubstituteOutcome("A snake!", Encounter.Snake),
+                        new FlavorOutcome("Nothing inside."),
+                    ],
+                },
+                new EncounterOption
+                {
+                    Label = "Ignore",
+                    Kind = OptionKind.Ignore,
+                    Outcomes = [new FlavorOutcome("Hopped past.")],
+                },
+            ]),
         }.ToFrozenDictionary();
 
         foreach (var (encounter, info) in Info)

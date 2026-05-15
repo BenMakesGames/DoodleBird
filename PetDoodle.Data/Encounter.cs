@@ -14,4 +14,12 @@ public enum Encounter
     PurpleSeaweed,
     AggressiveSeagull,
     StartledCrab,
+    GlowingMushrooms,
+    GiantBat,
+    LargeBoulder,
+    CarnivorousPlant,
+    Quicksand,
+    NanerTree,
+    NanerBird,
+    LongAbandonedVillage,
 }

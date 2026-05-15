@@ -1,12 +1,14 @@
 # Biome: Umbra (+ BiomeShiftOutcome)
 
 ## Context
-**Current behavior**: The `Outcome` sealed-record hierarchy has three kinds — `FlavorOutcome`, `SubstituteOutcome` (swap the current step's encounter, same biome), `EndAdventureOutcome` (end the run). No mechanism exists to *replace the remaining steps* of an in-flight adventure with a sub-adventure in a different biome. The `Biome` enum has 9 values; `Umbra` is not among them. The `Mushrooms` encounter (authored by the parent grasslands ticket) has two outcomes on its "Eat one" option; a third "trippy" outcome was deferred pending this ticket.
+**Current behavior**: The `Outcome` sealed-record hierarchy has three kinds — `FlavorOutcome`, `SubstituteOutcome` (swap the current step's encounter, same biome), `EndAdventureOutcome` (end the run). No mechanism exists to *replace the remaining steps* of an in-flight adventure with a sub-adventure in a different biome. The `Biome` enum has 9 values; `Umbra` is not among them. The grasslands `Mushrooms` encounter has two outcomes on its "Eat one" option; a third "trippy" outcome was deferred pending this ticket. The cave `GlowingMushrooms` encounter ships single-option (Ignore only) — its "Eat" option was deferred pending this ticket because Glowing Mushrooms are *always* trippy when eaten.
 
-**New behavior**: A new sealed `BiomeShiftOutcome` joins the hierarchy. When applied, it **clears the adventure's remaining steps and replaces them with a freshly-rolled sub-adventure in a different biome** (default: roll N encounters uniformly from the target biome's `PossibleEncounters`). A new `Biome.Umbra` enum value is added with its `BiomeInfo` entry (display name, sky/ground, `PossibleEncounters`) and **at least one authored Umbra encounter** so the shift can resolve into real content. The third `Mushrooms` "Eat one" outcome is appended as a `BiomeShiftOutcome` targeting Umbra with short trippy flavor text, completing the Mushrooms encounter design.
+**New behavior**: A new sealed `BiomeShiftOutcome` joins the hierarchy. When applied, it **clears the adventure's remaining steps and replaces them with a freshly-rolled sub-adventure in a different biome** (default: roll N encounters uniformly from the target biome's `PossibleEncounters`). A new `Biome.Umbra` enum value is added with its `BiomeInfo` entry (display name, sky/ground, `PossibleEncounters`) and **at least one authored Umbra encounter** so the shift can resolve into real content. The grasslands `Mushrooms` "Eat one" option gets a third outcome appended (a `BiomeShiftOutcome` targeting Umbra with short trippy flavor text). The cave `GlowingMushrooms` encounter gets an "Eat" option appended (a single-outcome Engage whose only outcome is a `BiomeShiftOutcome` targeting Umbra — always-trippy semantics).
 
 ## Prerequisites
 - [Biome: Grasslands](./biome-grasslands.md) — authors the `Mushrooms` encounter that this ticket extends with a third outcome. If grasslands lands `Mushrooms` under a different name during its design session, this ticket targets that name instead.
+- [Biome: Cave](./biome-cave.md) — authors the `GlowingMushrooms` encounter (single-option Ignore today). This ticket appends an "Eat" option whose only outcome is a `BiomeShiftOutcome` to Umbra.
+- [Biome: Jungle](./complete/2026-05-15%20biome-jungle.md) — authors the `NanerBird` substitute-only encounter (reached from `NanerTree.Climb`). Its `Listen` option ships single-outcome today. This ticket appends a second outcome (`BiomeShiftOutcome` → Umbra) so `Listen` becomes a 50/50 between safe flavor and Umbra shift.
 - [Outcome Resolution](./outcome-resolution.md) — establishes the `Adventuring.ApplyOutcome` switch over the sealed-record hierarchy. **This ticket adds a `BiomeShiftOutcome` arm to that switch.** Without T6 the new record exists but is never applied; with T6's exhaustive-switch + `UnreachableException` default arm, a `BiomeShiftOutcome` rolled before its arm is wired would crash at runtime. See Open Decision 1 if you want to land this ticket without T6.
 
 ## Scope
@@ -18,6 +20,8 @@
 - `PetDoodle/Encounters/EncounterExtensions.cs`: `EncounterInfo` entries for the new Umbra encounters with full `Options` + non-empty `Outcomes`.
 - `PetDoodle/Biomes/BiomeExtensions.cs`: rebuild `Biome.Umbra`'s entry with the authored encounters appended to `PossibleEncounters`.
 - `PetDoodle/Encounters/EncounterExtensions.cs`: append a `BiomeShiftOutcome` to the existing `Mushrooms` "Eat one" option's `Outcomes` array (rebuild the `EncounterInfo` record for `Mushrooms`).
+- `PetDoodle/Encounters/EncounterExtensions.cs`: append a new "Eat" option to the existing cave `GlowingMushrooms` `EncounterInfo` — single Engage option whose only outcome is a `BiomeShiftOutcome` targeting `Biome.Umbra`. Glowing Mushrooms are *always* trippy when eaten, so unlike grasslands `Mushrooms` (1-in-3), this Eat is deterministic-shift.
+- `PetDoodle/Encounters/EncounterExtensions.cs`: append a second outcome to the jungle `NanerBird` "Listen" option's `Outcomes` array — a `BiomeShiftOutcome` targeting `Biome.Umbra`. Result: `Listen` goes from single-outcome flavor ("Words made no sense.") to a 50/50 between flavor and Umbra shift.
 - `PetDoodle/GameStates/Adventuring.cs`: add a `BiomeShiftOutcome` arm to the `ApplyOutcome` switch (introduced by T6). Implementation: clear `RemainingSteps`, append a freshly-rolled sub-adventure for the target biome, save, then call `EnterCurrentStep` to load the first new step into the option UI. (Same internal helpers as `SubstituteCurrentEncounter` — save + `EnterCurrentStep` — just with a multi-step replacement instead of a single-step swap.)
 - `docs/biomes/umbra.md`: design doc capturing Umbra's aesthetic, encounter intents, and any flavor notes — mirrors the per-biome design-doc pattern.
 
@@ -89,6 +93,8 @@
 - [ ] Each new Umbra encounter has an `EncounterInfo` entry in `EncounterExtensions.Info` with ≥2 options; every option has a non-empty `Outcomes` array and a designed `OptionKind`.
 - [ ] `EncounterExtensions` static-ctor sanity check (every option's `Outcomes` non-empty) passes.
 - [ ] The `Mushrooms` encounter's "Eat one" option (or whatever the grasslands ticket named the equivalent) has a third outcome of type `BiomeShiftOutcome` whose `TargetBiome == Biome.Umbra`, with flavor text fitting the 128-px viewport at 6×8 font (≤~21 chars).
+- [ ] The cave `GlowingMushrooms` encounter gains an "Eat" option (Engage kind) whose `Outcomes` array contains a single `BiomeShiftOutcome` whose `TargetBiome == Biome.Umbra`. Result: cave Glowing Mushrooms goes from single-option (Ignore) to two-option (Eat, Ignore); Eat is a deterministic shift to Umbra.
+- [ ] The jungle `NanerBird` encounter's "Listen" option has a second outcome of type `BiomeShiftOutcome` whose `TargetBiome == Biome.Umbra`, with flavor text fitting the 128-px viewport at 6×8 font (≤~21 chars). Result: `Listen` becomes a 50/50 between flavor ("Words made no sense.") and Umbra shift.
 - [ ] `Adventuring.ApplyOutcome` (from T6) has an explicit arm for `BiomeShiftOutcome` that: clears `GameData.CurrentAdventure.RemainingSteps`, repopulates it with `StepCount` freshly-rolled `AdventureStep`s targeting `TargetBiome` (uniform pick from `TargetBiome.GetInfo().PossibleEncounters`), calls `SaveService.Save`, then calls `EnterCurrentStep` to enter the first new step. (Adjust if Open Decision 2 picks shape (b) / (c).)
 - [ ] No new dependencies added to `PetDoodle.Data` (zero-deps rule).
 - [ ] `docs/biomes/umbra.md` exists and describes the biome's aesthetic, the authored encounter set + intents, and the rationale for the chosen sky/ground colors.
@@ -109,6 +115,18 @@ In `BiomeExtensions.cs`'s static-ctor dictionary literal, add a `[Biome.Umbra]` 
 
 ### 5. Append the trippy outcome to `Mushrooms`
 Locate the `Mushrooms` (or grasslands-implementer-chosen-name) entry in `EncounterExtensions.Info`. Rebuild its `EncounterInfo` record (records are immutable; replace the dictionary entry) with the same options as before, except the "Eat one" option's `Outcomes` array gains a third element: `new BiomeShiftOutcome("Trippy! To the Umbra", Biome.Umbra, /* StepCount */ 2 or 3 per Open Decision 2)`. The other Mushrooms outcomes (already authored by grasslands) stay untouched. Net effect: `Random.Shared.Next(option.Outcomes)` now has 1-in-3 chance of rolling the trippy outcome.
+
+### 5b. Append the "Eat" option to cave `GlowingMushrooms`
+Locate the `GlowingMushrooms` entry in `EncounterExtensions.Info` (currently single-option Ignore). Rebuild its `EncounterInfo` record with the existing Ignore option plus a new Engage option:
+```
+new EncounterOption
+{
+    Label = "Eat",
+    Kind = OptionKind.Engage,
+    Outcomes = [new BiomeShiftOutcome("Trippy! To the Umbra", Biome.Umbra, /* StepCount */ 2 or 3)],
+}
+```
+Unlike grasslands `Mushrooms` where the shift is one of three outcomes (1-in-3 roll), cave Glowing Mushrooms' Eat ships with **only** the shift outcome — eating glowing mushrooms is deterministically trippy. Update `docs/biomes/cave.md` to remove the deferral note and document the now-two-option encounter.
 
 ### 6. Add the `BiomeShiftOutcome` arm to `ApplyOutcome`
 In `Adventuring.cs`, locate the `ApplyOutcome` switch (introduced by T6). Add an arm before the `default`:
