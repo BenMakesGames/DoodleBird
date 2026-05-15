@@ -4,3 +4,4 @@ bin/
 obj/
 
 .claude/settings.local.json
+*.DotSettings.user

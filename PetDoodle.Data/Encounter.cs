@@ -8,4 +8,6 @@ public enum Encounter
     Mushrooms,
     GiantToad,
     FightSquirrel,
+    MusclyTrout,
+    Rapids,
 }

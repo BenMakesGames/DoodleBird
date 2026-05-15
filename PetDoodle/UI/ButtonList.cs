@@ -1,7 +1,6 @@
 using BenMakesGames.PlayPlayMini;
 using BenMakesGames.PlayPlayMini.GraphicsExtensions;
 using BenMakesGames.PlayPlayMini.Services;
-using Microsoft.Xna.Framework;
 
 namespace PetDoodle.UI;
 

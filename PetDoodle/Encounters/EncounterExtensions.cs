@@ -136,6 +136,38 @@ public static class EncounterExtensions
                     Outcomes = [new FlavorOutcome("Glided down.")],
                 },
             ]),
+
+            [Encounter.MusclyTrout] = new("Muscly Trout", [
+                new EncounterOption
+                {
+                    Label = "Eat",
+                    Kind = OptionKind.Engage,
+                    Outcomes =
+                    [
+                        new FlavorOutcome("Tasty fish!"),
+                        new FlavorOutcome("Too strong to grab."),
+                    ],
+                },
+                new EncounterOption
+                {
+                    Label = "Ignore",
+                    Kind = OptionKind.Ignore,
+                    Outcomes = [new FlavorOutcome("Swam past.")],
+                },
+            ]),
+
+            [Encounter.Rapids] = new("Rapids", [
+                new EncounterOption
+                {
+                    Label = "Avoid rocks",
+                    Kind = OptionKind.Engage,
+                    Outcomes =
+                    [
+                        new FlavorOutcome("Avoided them."),
+                        new EndAdventureOutcome("Hit a rock. Limped home."),
+                    ],
+                },
+            ]),
         }.ToFrozenDictionary();
 
         foreach (var (encounter, info) in Info)

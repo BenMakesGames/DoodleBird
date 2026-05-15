@@ -13,7 +13,7 @@ public static class BiomeExtensions
         Info = new Dictionary<Biome, BiomeInfo>
         {
             [Biome.Grasslands]   = new("Grasslands",    DawnBringers16.LightBlue, DawnBringers16.DarkGreen, [Encounter.HollowLog, Encounter.Snake, Encounter.LoneTree]),
-            [Biome.River]        = new("River",         DawnBringers16.LightBlue, DawnBringers16.Blue,      []),
+            [Biome.River]        = new("River",         DawnBringers16.LightBlue, DawnBringers16.Blue,      [Encounter.MusclyTrout, Encounter.Rapids]),
             [Biome.Jungle]       = new("Jungle",        DawnBringers16.Green,     DawnBringers16.DarkGreen, []),
             [Biome.Cave]         = new("Cave",          DawnBringers16.Black,     DawnBringers16.Brown,     []),
             [Biome.Mountain]     = new("Mountain",      DawnBringers16.LightGray, DawnBringers16.DarkGray,  []),

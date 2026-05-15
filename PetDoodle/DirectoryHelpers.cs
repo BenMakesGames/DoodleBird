@@ -1,7 +1,4 @@
-﻿using System;
-using System.IO;
-
-namespace PetDoodle;
+﻿namespace PetDoodle;
 
 public static class DirectoryHelpers
 {

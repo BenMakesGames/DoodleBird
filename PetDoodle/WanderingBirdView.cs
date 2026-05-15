@@ -52,8 +52,7 @@ public sealed class WanderingBirdView
         if (TargetX is { } target)
         {
             HopPhase = (HopPhase + MathF.Abs(X - LastX.Value)) % HopWavelength;
-            if (target != X)
-                FacingRight = target > X;
+            FacingRight = target > X;
         }
         else
         {
