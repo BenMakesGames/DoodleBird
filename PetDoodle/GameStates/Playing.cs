@@ -2,7 +2,9 @@ using BenMakesGames.MonoGame.Palettes;
 using BenMakesGames.PlayPlayMini;
 using BenMakesGames.PlayPlayMini.Services;
 using Microsoft.Xna.Framework;
+using PetDoodle.Adventures;
 using PetDoodle.Data;
+using PetDoodle.Persistence;
 
 namespace PetDoodle.GameStates;
 
@@ -13,39 +15,60 @@ public sealed class Playing: GameState<PlayingConfig>
 {
     private const float InitialBirdX = 20f;
     private const float InitialBirdTargetX = 100f;
+    private const float IdleSecondsToAdventure = 3f;
 
     private GraphicsManager Graphics { get; }
     private GameStateManager GSM { get; }
     private MouseManager Mouse { get; }
+    private SaveService SaveService { get; }
 
     private GameData GameData { get; }
     private WanderingBirdView BirdView { get; }
 
+    private float IdleSeconds;
+
     public Playing(
         PlayingConfig config,
-        GraphicsManager graphics, GameStateManager gsm, MouseManager mouse
+        GraphicsManager graphics, GameStateManager gsm, MouseManager mouse,
+        SaveService saveService
     )
     {
         Graphics = graphics;
         GSM = gsm;
         Mouse = mouse;
+        SaveService = saveService;
 
         GameData = config.GameData;
         BirdView = new WanderingBirdView(InitialBirdX, InitialBirdTargetX);
     }
 
-    // overriding lifecycle methods is optional; feel free to delete any overrides you're not using.
-    // note: you do NOT need to call the `base.` for lifecycle methods. so save some CPU cycles,
-    // and don't call them :P
+    public override void Enter()
+    {
+        if (GameData.CurrentAdventure is not null)
+            GSM.ChangeState<Adventuring, AdventuringConfig>(new(GameData));
+    }
 
     public override void Input(GameTime gameTime)
     {
-        // TODO: get input from keyboard, mouse, or gamepad (refer to PlayPlayMini documentation for more info)
     }
 
     public override void FixedUpdate(GameTime gameTime)
     {
         BirdView.FixedUpdate(gameTime);
+
+        if (GameData.CurrentAdventure is not null)
+            return;
+
+        if (BirdView.IsIdle)
+        {
+            IdleSeconds += (float)gameTime.ElapsedGameTime.TotalSeconds;
+            if (IdleSeconds >= IdleSecondsToAdventure)
+                TryBeginAdventure();
+        }
+        else
+        {
+            IdleSeconds = 0f;
+        }
     }
 
     public override void Update(GameTime gameTime)
@@ -63,5 +86,19 @@ public sealed class Playing: GameState<PlayingConfig>
         BirdView.Draw(Graphics);
 
         Mouse.Draw(this);
+    }
+
+    private void TryBeginAdventure()
+    {
+        var adventure = AdventureGenerator.TryRoll();
+        if (adventure is null)
+        {
+            IdleSeconds = 0f;
+            return;
+        }
+
+        GameData.CurrentAdventure = adventure;
+        SaveService.Save(GameData);
+        GSM.ChangeState<Adventuring, AdventuringConfig>(new(GameData));
     }
 }

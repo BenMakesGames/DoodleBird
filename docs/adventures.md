@@ -84,6 +84,11 @@ for that biome.
 - A `Retreat` option, when present, cancels the entire adventure and
   returns the bird home immediately. Retreat is *common*, not guaranteed —
   some encounters may not offer it (e.g. once-you're-in-the-maze scenarios).
+  **Authoring convention**: every outcome on a `Retreat` option should be
+  an `EndAdventureOutcome`. The outcome data then mechanically matches the
+  kind's intent — the resolver can dispatch on either signal. Single-outcome
+  options are valid when the design wants deterministic "always succeeds"
+  feedback (e.g. an Ignore option that just hops the bird past).
 
 ### Outcomes
 
@@ -101,6 +106,11 @@ Outcomes are sealed-record-hierarchy in the codebase:
   resets to 5 seconds. The substituted encounter does not have to be in the
   current biome's `PossibleEncounters` pool — author intent rules. (Useful
   for trap-style outcomes like `Look inside hollow log` → giant toad.)
+  **Constraint**: the target `Encounter` must have a fully-authored
+  `EncounterInfo` entry in `EncounterExtensions.Info`, or `GetInfo()` throws
+  `KeyNotFoundException` at runtime when the substitute fires. Substitute
+  targets are "secondary" encounters — authored but excluded from
+  `PossibleEncounters` so they're only reachable via chain.
 - **`EndAdventureOutcome(Text)`** — show the text, then end the adventure
   immediately (clear `CurrentAdventure`, save, return to `Playing`).
   Same final effect as a `Retreat` option, but driven by an option's

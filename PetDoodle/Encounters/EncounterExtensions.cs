@@ -9,7 +9,134 @@ public static class EncounterExtensions
 
     static EncounterExtensions()
     {
-        Info = new Dictionary<Encounter, EncounterInfo>().ToFrozenDictionary();
+        Info = new Dictionary<Encounter, EncounterInfo>
+        {
+            [Encounter.HollowLog] = new("Hollow Log", [
+                new EncounterOption
+                {
+                    Label = "Crawl through",
+                    Kind = OptionKind.Engage,
+                    Outcomes =
+                    [
+                        new FlavorOutcome("Nothing inside."),
+                        new SubstituteOutcome("Found mushrooms!", Encounter.Mushrooms),
+                        new SubstituteOutcome("A giant toad!", Encounter.GiantToad),
+                    ],
+                },
+                new EncounterOption
+                {
+                    Label = "Jump over",
+                    Kind = OptionKind.Ignore,
+                    Outcomes =
+                    [
+                        new FlavorOutcome("Cleared it!"),
+                        new FlavorOutcome("Tripped and fell."),
+                    ],
+                },
+                new EncounterOption
+                {
+                    Label = "Roll it away",
+                    Kind = OptionKind.Engage,
+                    Outcomes =
+                    [
+                        new FlavorOutcome("Rolled it away!"),
+                        new FlavorOutcome("Too heavy."),
+                        new SubstituteOutcome("Toad crawled out!", Encounter.GiantToad),
+                    ],
+                },
+            ]),
+
+            [Encounter.Snake] = new("Snake", [
+                new EncounterOption
+                {
+                    Label = "Go around",
+                    Kind = OptionKind.Ignore,
+                    Outcomes = [new FlavorOutcome("Wide berth given.")],
+                },
+                new EncounterOption
+                {
+                    Label = "Intimidate",
+                    Kind = OptionKind.Engage,
+                    Outcomes = [new FlavorOutcome("Snake fled.")],
+                },
+            ]),
+
+            [Encounter.LoneTree] = new("Lone Tree", [
+                new EncounterOption
+                {
+                    Label = "Climb it",
+                    Kind = OptionKind.Engage,
+                    Outcomes =
+                    [
+                        new FlavorOutcome("Found bananas!"),
+                        new SubstituteOutcome("A squirrel!", Encounter.FightSquirrel),
+                    ],
+                },
+                new EncounterOption
+                {
+                    Label = "Ignore it",
+                    Kind = OptionKind.Ignore,
+                    Outcomes = [new FlavorOutcome("Hopped past.")],
+                },
+            ]),
+
+            [Encounter.Mushrooms] = new("Mushrooms", [
+                new EncounterOption
+                {
+                    Label = "Eat one",
+                    Kind = OptionKind.Engage,
+                    Outcomes =
+                    [
+                        new FlavorOutcome("Tasty!"),
+                        new FlavorOutcome("Bitter. Yuck!"),
+                    ],
+                },
+                new EncounterOption
+                {
+                    Label = "Hop away",
+                    Kind = OptionKind.Ignore,
+                    Outcomes = [new FlavorOutcome("Hopped away.")],
+                },
+            ]),
+
+            [Encounter.GiantToad] = new("Giant Toad", [
+                new EncounterOption
+                {
+                    Label = "Peck at it",
+                    Kind = OptionKind.Engage,
+                    Outcomes =
+                    [
+                        new FlavorOutcome("Toad hopped off."),
+                        new EndAdventureOutcome("Knocked silly. Home."),
+                    ],
+                },
+                new EncounterOption
+                {
+                    Label = "Flee",
+                    Kind = OptionKind.Retreat,
+                    Outcomes = [new EndAdventureOutcome("Flapped home!")],
+                },
+            ]),
+
+            [Encounter.FightSquirrel] = new("Fight Squirrel", [
+                new EncounterOption
+                {
+                    Label = "Peck",
+                    Kind = OptionKind.Engage,
+                    Outcomes =
+                    [
+                        new FlavorOutcome("Squirrel fled."),
+                        new EndAdventureOutcome("Lost the fight."),
+                    ],
+                },
+                new EncounterOption
+                {
+                    Label = "Glide to surface",
+                    Kind = OptionKind.Ignore,
+                    Outcomes = [new FlavorOutcome("Glided down.")],
+                },
+            ]),
+        }.ToFrozenDictionary();
 
         foreach (var (encounter, info) in Info)
         {

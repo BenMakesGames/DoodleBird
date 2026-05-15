@@ -1,0 +1,144 @@
+# Biome: Umbra (+ BiomeShiftOutcome)
+
+## Context
+**Current behavior**: The `Outcome` sealed-record hierarchy has three kinds — `FlavorOutcome`, `SubstituteOutcome` (swap the current step's encounter, same biome), `EndAdventureOutcome` (end the run). No mechanism exists to *replace the remaining steps* of an in-flight adventure with a sub-adventure in a different biome. The `Biome` enum has 9 values; `Umbra` is not among them. The `Mushrooms` encounter (authored by the parent grasslands ticket) has two outcomes on its "Eat one" option; a third "trippy" outcome was deferred pending this ticket.
+
+**New behavior**: A new sealed `BiomeShiftOutcome` joins the hierarchy. When applied, it **clears the adventure's remaining steps and replaces them with a freshly-rolled sub-adventure in a different biome** (default: roll N encounters uniformly from the target biome's `PossibleEncounters`). A new `Biome.Umbra` enum value is added with its `BiomeInfo` entry (display name, sky/ground, `PossibleEncounters`) and **at least one authored Umbra encounter** so the shift can resolve into real content. The third `Mushrooms` "Eat one" outcome is appended as a `BiomeShiftOutcome` targeting Umbra with short trippy flavor text, completing the Mushrooms encounter design.
+
+## Prerequisites
+- [Biome: Grasslands](./biome-grasslands.md) — authors the `Mushrooms` encounter that this ticket extends with a third outcome. If grasslands lands `Mushrooms` under a different name during its design session, this ticket targets that name instead.
+- [Outcome Resolution](./outcome-resolution.md) — establishes the `Adventuring.ApplyOutcome` switch over the sealed-record hierarchy. **This ticket adds a `BiomeShiftOutcome` arm to that switch.** Without T6 the new record exists but is never applied; with T6's exhaustive-switch + `UnreachableException` default arm, a `BiomeShiftOutcome` rolled before its arm is wired would crash at runtime. See Open Decision 1 if you want to land this ticket without T6.
+
+## Scope
+### In scope
+- `PetDoodle.Data/Biome.cs`: add `Umbra` enum value.
+- `PetDoodle/Biomes/BiomeExtensions.cs`: add a `BiomeInfo` entry for `Biome.Umbra` (display name, sky/ground colors, `PossibleEncounters`).
+- `PetDoodle/Encounters/Outcome.cs`: new sealed `BiomeShiftOutcome` derived record carrying flavor `Text` + enough info to construct the sub-adventure. See Open Decision 2 for shape.
+- `PetDoodle.Data/Encounter.cs`: 1+ new `Encounter` enum values for Umbra encounters (final count decided in the design session — aim for at least 1, up to 3).
+- `PetDoodle/Encounters/EncounterExtensions.cs`: `EncounterInfo` entries for the new Umbra encounters with full `Options` + non-empty `Outcomes`.
+- `PetDoodle/Biomes/BiomeExtensions.cs`: rebuild `Biome.Umbra`'s entry with the authored encounters appended to `PossibleEncounters`.
+- `PetDoodle/Encounters/EncounterExtensions.cs`: append a `BiomeShiftOutcome` to the existing `Mushrooms` "Eat one" option's `Outcomes` array (rebuild the `EncounterInfo` record for `Mushrooms`).
+- `PetDoodle/GameStates/Adventuring.cs`: add a `BiomeShiftOutcome` arm to the `ApplyOutcome` switch (introduced by T6). Implementation: clear `RemainingSteps`, append a freshly-rolled sub-adventure for the target biome, save, then call `EnterCurrentStep` to load the first new step into the option UI. (Same internal helpers as `SubstituteCurrentEncounter` — save + `EnterCurrentStep` — just with a multi-step replacement instead of a single-step swap.)
+- `docs/biomes/umbra.md`: design doc capturing Umbra's aesthetic, encounter intents, and any flavor notes — mirrors the per-biome design-doc pattern.
+
+### Out of scope
+- Adding `Umbra` to the existing 6 adventure templates in `AdventureGenerator`. Umbra is reachable **only** via `BiomeShiftOutcome` for this iteration — a "secret" / discovered biome.
+- Recursive biome-shifts (e.g. Umbra → some other biome). Authored only if a design need surfaces; not required for this ticket.
+- Per-encounter art / sprites for Umbra encounters. Like all biomes, Umbra renders sky + ground band + encounter-name text only.
+- New `OptionKind` values. Umbra encounters use existing `Engage` / `Ignore` / `Retreat`.
+- Generalising `BiomeShiftOutcome` into a stat-effect-bearing outcome (e.g. "lose hunger and shift biome"). Stat systems don't exist; YAGNI.
+- Stat / inventory / mood effects from eating the trippy mushroom beyond the biome shift itself.
+
+## Relevant Docs & Anchors
+- `docs/adventures.md` §Outcomes — current taxonomy this ticket extends. §Conventions — sealed-record hierarchy + compiler-flagged exhaustiveness via switch expressions.
+- `docs/tickets/biome-grasslands.md` — parent ticket authoring `Mushrooms`. Read its final shape (design doc at `docs/biomes/grasslands.md`) when picking the exact option label and outcome-array index to append to.
+- `docs/tickets/outcome-resolution.md` — T6, the home of the `ApplyOutcome` switch this ticket extends. Read the existing arms before adding a new one.
+- `docs/tickets/complete/2026-05-15 biome-and-encounter-info-pattern.md` — `Outcome` hierarchy origin; explains why these records live in `PetDoodle` (not `PetDoodle.Data`) and reference `Encounter` / `Biome` from the data project.
+- Code anchors:
+  - `Outcome` (`PetDoodle/Encounters/Outcome.cs`) — extend here.
+  - `Biome` (`PetDoodle.Data/Biome.cs`) — append `Umbra`.
+  - `BiomeExtensions.Info` static-ctor (`PetDoodle/Biomes/BiomeExtensions.cs`) — add the Umbra entry; count-sanity-check will fire if the dictionary entry is missed.
+  - `EncounterExtensions.Info` static-ctor (`PetDoodle/Encounters/EncounterExtensions.cs`) — Umbra encounter entries land here; static-ctor non-empty-Outcomes sanity check still applies.
+  - `Adventuring.ApplyOutcome` (post-T6) — add `BiomeShiftOutcome` arm.
+  - `Adventuring.SubstituteCurrentEncounter` / `EnterCurrentStep` (post-T6) — model the new helper on these (save + rebuild option UI).
+  - `AdventureGenerator.TryRoll` (`PetDoodle/Adventures/AdventureGenerator.cs`) — reference for "uniform pick from `biome.GetInfo().PossibleEncounters`"; mirror that idiom inside the new helper.
+
+## Constraints & Gotchas
+- **`PetDoodle.Data` is zero-deps.** `BiomeShiftOutcome` lives in `PetDoodle` (alongside the rest of `Outcome`), not in the data project — it references the `Outcome` base record which is already in `PetDoodle/Encounters/`. `Biome` (referenced by `BiomeShiftOutcome`) is a plain enum in the data project — safe to reference from a `PetDoodle` record.
+- **Exhaustive switch on sealed-record hierarchy is *runtime*-enforced, not compile-time.** T6 places a `default: throw new UnreachableException()` arm. Adding a new sealed derived record without a matching arm = silent compile + loud runtime crash on first roll. **The new arm must land in the same commit as the new record.** If splitting the ticket, see Open Decision 1.
+- **Template filter is unaffected.** `AdventureGenerator.TryRoll` filters templates by `biome.GetInfo().PossibleEncounters.Length > 0`. Umbra is not in any template, so the filter doesn't gate on Umbra's pool. **However**, the `BiomeShiftOutcome` apply path *does* gate on Umbra's pool — if you ship `BiomeShiftOutcome` with a target biome that has an empty pool, the `Random.Shared.Next` call inside the helper will throw (or pick from an empty array, depending on implementation). Acceptance criterion below: Umbra must have ≥1 authored encounter at the close of this ticket.
+- **`Biome` count-sanity check.** `BiomeExtensions` static ctor asserts `Info.Count == Enum.GetValues<Biome>().Length`. Adding `Umbra` to the enum without the dictionary entry (or vice-versa) fails fast at app startup. Pit-of-success — don't bypass.
+- **Outcome text width.** 128 px viewport, 6×8 font ≈ 21 chars per line. User's suggested flavor `"Trippy! Wobbled into the Umbra..."` is ~33 chars — overflows. Shorten in the design session; see Open Decision 3.
+- **Save boundary.** The new `BiomeShiftOutcome` apply helper mutates `RemainingSteps` (clear + repopulate). That mutation must pair with a `SaveService.Save` call, same as `ResolveCurrentStep` / `SubstituteCurrentEncounter` / `EndAdventure`. Pit-of-success: helper-method-only mutation; don't sprinkle.
+- **`WarningsAsErrors=Nullable`.** `BiomeShiftOutcome.TargetBiome` is a value-type enum (non-null). If Open Decision 2 selects an explicit `AdventureStep[]` payload, those array elements are non-null records. No nullability surprises if the shape is enum + int.
+- **Sub-adventure is generated at *apply* time, not at outcome construction.** The pre-rolled-adventure / anti-save-scum invariant in `docs/adventures.md` says the **outer** adventure is pre-rolled; a `BiomeShiftOutcome` is a transition event, and the sub-adventure it spawns is rolled when the shift fires. Player can't save-scum the *roll* of the shift outcome itself (T6 already establishes that outcome rolls aren't persisted until applied), and the sub-adventure becomes part of the persisted state the moment it's spawned — same anti-scum guarantee as the original adventure.
+
+## Open Decisions
+1. **Land with T6 prereq vs. data-only scope.** Default: **prereq on T6 + ship the resolver arm in this ticket.** Alternative: scope this ticket to *data shape only* (record + enum + Umbra encounters + Mushrooms outcome), and have the implementer add a `case BiomeShiftOutcome: throw new NotImplementedException()` placeholder arm pre-T6. Rejected by default because authoring a `BiomeShiftOutcome` instance that can roll before its resolver arm exists is a footgun — the moment a Mushrooms "Eat one" rolls onto the trippy outcome, the game crashes. Better to gate on T6.
+2. **`BiomeShiftOutcome` payload shape.** Three options:
+   - **(a) `BiomeShiftOutcome(string Text, Biome TargetBiome, int StepCount)`** — apply-time rolls `StepCount` encounters uniformly from `TargetBiome.GetInfo().PossibleEncounters`. Simplest; mirrors `AdventureGenerator` per-biome encounter-pick idiom. Default.
+   - **(b) `BiomeShiftOutcome(string Text, AdventureStep[] NewSteps)`** — fully authored sub-adventure baked into the outcome record. Most control, least re-rollable, lets authors craft specific Umbra step sequences. Heavier authoring surface.
+   - **(c) Hybrid `BiomeShiftOutcome(string Text, Biome TargetBiome, int MinSteps, int MaxSteps)`** — random length within bounds. YAGNI.
+   - **Default: (a).** YAGNI / KISS; (b) is a follow-up the moment a designer asks for hand-crafted Umbra sequences. **Suggested `StepCount` value for the Mushrooms shift: 2 or 3** — long enough to feel like a detour, short enough not to drag.
+3. **Mushrooms trippy outcome text.** Must fit ~21 chars in the 6×8 font (and may render alongside other UI — implementer eyeballs the practical limit). Suggested shortlist:
+   - `"Trippy! To the Umbra"` (20)
+   - `"Wobble! Umbra calls."` (20)
+   - `"Trippy! Wobble..."` (17)
+   - `"Reality bends..."` (16)
+   - **Default: `"Trippy! To the Umbra"`** — preserves the user's intent in fewer chars. Implementer / user iterates in design session.
+4. **`Biome.Umbra` colors.** `DawnBringers16` palette is 16 entries (`docs/colors.md`). Trippy / liminal vibe wants high-contrast, off-natural. Suggested defaults:
+   - **Sky: `DarkPurple`. Ground: `Black`** (deep void aesthetic), or
+   - **Sky: `Purple`. Ground: `DarkPurple`** (saturated unreal), or
+   - **Sky: `Black`. Ground: `Purple`** (negative-space inversion).
+   - **Default: Sky `DarkPurple`, Ground `Black`.** Defer to design session; final pick captured in `docs/biomes/umbra.md`. (Confirm exact palette names against `BenMakesGames.MonoGame.Palettes.DawnBringers16` — the entries used elsewhere are `LightBlue`, `DarkGreen`, `Black`, `Brown`, `LightGray`, `DarkGray`, `White`, `Blue`, `Green`, `Yellow`, `DarkBlue`. Substitute `Purple` / `DarkPurple` with whichever closest names exist.)
+5. **Umbra encounter count + roster.** Design session output. 1 is the minimum (otherwise the shift can't resolve into anything); 2–3 gives the sub-adventure variety. Suggested seed list (use, swap, or discard):
+   - `WhisperingSpore` — "Whispering Spore" — Engage ("Listen") / Ignore ("Hum over it") / Retreat ("Plug ears").
+   - `EchoSelf` — "Echo Self" — Engage ("Greet") / Engage ("Mimic") / Retreat ("Look away"). Substitute-outcome candidate: greeting your echo summons a `MirrorBird` (another Umbra encounter).
+   - `GlowcapGlade` — "Glowcap Glade" — Engage ("Nibble"; recursion risk: a `BiomeShiftOutcome` back to grasslands? See Out of scope — recursive shifts not authored unless design asks).
+   - **Default: 2 Umbra encounters authored**, chosen during the design session. Roster captured in `docs/biomes/umbra.md`.
+6. **Outcome record name.** `BiomeShiftOutcome` (default) reads as "the outcome shifts biomes". Alternatives: `SubAdventureOutcome`, `ReplaceAdventureOutcome`, `BiomeJumpOutcome`. **Default: `BiomeShiftOutcome`.** Symmetric with `SubstituteOutcome` (substitutes encounter) / `EndAdventureOutcome` (ends adventure) — verb-noun where the verb describes the mutation scope.
+7. **Helper method name on `Adventuring`.** Apply-time helper to do the clear-and-roll. Suggested: `ShiftToBiome(Biome target, int stepCount)`. Alternative: `ReplaceAdventureWith(IList<AdventureStep>)` if Open Decision 2 picks shape (b). Mirrors `SubstituteCurrentEncounter`'s naming density.
+8. **Should Umbra encounters be eligible for `SubstituteOutcome` from non-Umbra encounters?** Free-standing question, low stakes: `SubstituteOutcome.NewEncounter` does not check biome membership (per T3 Constraints / `docs/adventures.md` §Outcomes). Default: yes, Umbra encounters are valid substitute targets — but no non-Umbra encounter authored today is expected to use one. Out of scope unless the design session adds it.
+
+## Acceptance Criteria
+- [ ] `PetDoodle.Data/Biome.cs` contains `Umbra` as a new enum value.
+- [ ] `BiomeExtensions.Info[Biome.Umbra]` is populated: non-empty `DisplayName` (default `"Umbra"`), sky + ground `Color` values from `DawnBringers16`, and `PossibleEncounters` containing every Umbra encounter authored by this ticket.
+- [ ] `BiomeExtensions` static-ctor count-sanity check (`Info.Count == Enum.GetValues<Biome>().Length`) still passes — Umbra entry present.
+- [ ] `PetDoodle/Encounters/Outcome.cs` contains `public sealed record BiomeShiftOutcome(...) : Outcome(Text)` whose payload is sufficient to construct the sub-adventure (default: `Text`, `TargetBiome`, `StepCount` per Open Decision 2a).
+- [ ] At least 1 (up to 3) new `Encounter` enum values authored in `PetDoodle.Data/Encounter.cs` for Umbra encounters.
+- [ ] Each new Umbra encounter has an `EncounterInfo` entry in `EncounterExtensions.Info` with ≥2 options; every option has a non-empty `Outcomes` array and a designed `OptionKind`.
+- [ ] `EncounterExtensions` static-ctor sanity check (every option's `Outcomes` non-empty) passes.
+- [ ] The `Mushrooms` encounter's "Eat one" option (or whatever the grasslands ticket named the equivalent) has a third outcome of type `BiomeShiftOutcome` whose `TargetBiome == Biome.Umbra`, with flavor text fitting the 128-px viewport at 6×8 font (≤~21 chars).
+- [ ] `Adventuring.ApplyOutcome` (from T6) has an explicit arm for `BiomeShiftOutcome` that: clears `GameData.CurrentAdventure.RemainingSteps`, repopulates it with `StepCount` freshly-rolled `AdventureStep`s targeting `TargetBiome` (uniform pick from `TargetBiome.GetInfo().PossibleEncounters`), calls `SaveService.Save`, then calls `EnterCurrentStep` to enter the first new step. (Adjust if Open Decision 2 picks shape (b) / (c).)
+- [ ] No new dependencies added to `PetDoodle.Data` (zero-deps rule).
+- [ ] `docs/biomes/umbra.md` exists and describes the biome's aesthetic, the authored encounter set + intents, and the rationale for the chosen sky/ground colors.
+
+## Implementation
+
+### 1. Add `Biome.Umbra` enum value
+Append `Umbra` to `PetDoodle.Data/Biome.cs`. Position at the end of the list (existing values are positional; adding at the end avoids shifting any other value's underlying int). The `BiomeExtensions` count-sanity check will fire on app startup until the dictionary entry is added — that's the safety net.
+
+### 2. Add `BiomeShiftOutcome` to the `Outcome` hierarchy
+In `PetDoodle/Encounters/Outcome.cs`, add a new `public sealed record BiomeShiftOutcome(string Text, Biome TargetBiome, int StepCount) : Outcome(Text);` (default shape per Open Decision 2a). The record inherits `Text` from the base, mirrors the existing `SubstituteOutcome` / `EndAdventureOutcome` density. **Guard at ctor: `StepCount` must be ≥1** — throw `ArgumentOutOfRangeException` if zero or negative. Pit-of-success: a `StepCount = 0` shift would clear `RemainingSteps` to empty and immediately end the adventure (functionally equivalent to `EndAdventureOutcome` but more surprising) — authors should use `EndAdventureOutcome` for that intent.
+
+### 3. Author Umbra encounters (design session output)
+In `PetDoodle.Data/Encounter.cs`, append the new enum values from the design session (e.g. `WhisperingSpore`, `EchoSelf`). In `PetDoodle/Encounters/EncounterExtensions.cs`, add corresponding `EncounterInfo` entries with `DisplayName` + `Options[]` (each option has `Label`, `Kind`, non-empty `Outcomes[]`). Mirror the shape of the encounters authored by the grasslands ticket — same `EncounterInfo` / `EncounterOption` shape, same `Outcome` derived types.
+
+### 4. Add `Biome.Umbra` to `BiomeExtensions.Info`
+In `BiomeExtensions.cs`'s static-ctor dictionary literal, add a `[Biome.Umbra]` entry with display name, sky color, ground color (Open Decision 4), and `PossibleEncounters` containing the Umbra encounters from step 3. Keep the static-ctor count-sanity-check call site unchanged — it'll pass automatically once enum + dictionary are in sync.
+
+### 5. Append the trippy outcome to `Mushrooms`
+Locate the `Mushrooms` (or grasslands-implementer-chosen-name) entry in `EncounterExtensions.Info`. Rebuild its `EncounterInfo` record (records are immutable; replace the dictionary entry) with the same options as before, except the "Eat one" option's `Outcomes` array gains a third element: `new BiomeShiftOutcome("Trippy! To the Umbra", Biome.Umbra, /* StepCount */ 2 or 3 per Open Decision 2)`. The other Mushrooms outcomes (already authored by grasslands) stay untouched. Net effect: `Random.Shared.Next(option.Outcomes)` now has 1-in-3 chance of rolling the trippy outcome.
+
+### 6. Add the `BiomeShiftOutcome` arm to `ApplyOutcome`
+In `Adventuring.cs`, locate the `ApplyOutcome` switch (introduced by T6). Add an arm before the `default`:
+```
+case BiomeShiftOutcome b:
+    ShiftToBiome(b.TargetBiome, b.StepCount);
+    break;
+```
+Then add the helper method:
+- `private void ShiftToBiome(Biome target, int stepCount)`:
+  - Pull the target's `PossibleEncounters` via `target.GetInfo().PossibleEncounters`.
+  - Build a fresh list of `stepCount` `AdventureStep`s: each step is `new AdventureStep(target, Random.Shared.Next(possibleEncounters))`.
+  - Mutate the existing `GameData.CurrentAdventure!.RemainingSteps`: `Clear()` then `AddRange(newSteps)` (preserves the same `List<AdventureStep>` reference — safer than reassigning the property if any code anywhere caches it).
+  - `SaveService.Save(GameData);`
+  - `EnterCurrentStep();` — same helper T5/T6 use to rebuild the option `ButtonList`, reset the 5s option timer, pick a fresh random default, set `CurrentPhase = ChoosingOption`. Reuses all the existing rendering invariants for free.
+
+Defensive: if `possibleEncounters.Length == 0`, throw a loud `InvalidOperationException` (this should be impossible given Acceptance Criterion: Umbra has ≥1 encounter, but the apply path is the canonical home of the assertion). Don't silently fall back to `EndAdventure`.
+
+### 7. Design doc at `docs/biomes/umbra.md`
+Mirror the per-biome design-doc pattern (see how `docs/biomes/grasslands.md` lands once the grasslands ticket completes). Capture: biome aesthetic / intent (trippy, unreal, accessible only via mushroom-shift), each authored encounter's flavor and rationale (why these options, why these outcomes), the chosen sky/ground colors and why, and any flavor notes for future expansion (e.g. "future Umbra encounters could include `BiomeShiftOutcome` back to grasslands for a 'come down' arc").
+
+## Test Plan
+- [ ] `dotnet build` passes with no warnings.
+- [ ] Launch the game. Trigger a grasslands adventure that rolls `Mushrooms`. Click "Eat one" repeatedly across multiple runs — verify all three outcomes appear over enough rolls (sample size ~10–20).
+- [ ] When the trippy outcome rolls: confirm the outcome text renders inside the 128 px viewport without overflowing the right edge.
+- [ ] After the trippy outcome's auto-advance: confirm the screen transitions into an Umbra step — sky/ground colors match the design-doc choices, encounter name is one of the authored Umbra encounters, and the option `ButtonList` rebuilds with that encounter's options + a fresh 5.0 timer.
+- [ ] Confirm the **remaining grasslands steps and any subsequent biome steps from the original adventure are gone** — `save.json` mid-Umbra-shift shows only the new Umbra steps in `RemainingSteps`, not the grasslands tail. This is the key behavioral difference from `SubstituteOutcome`.
+- [ ] Resolve the Umbra sub-adventure to completion (click through each Umbra step's options). Confirm return to `Playing` once the new `RemainingSteps` list empties. `save.json` shows `CurrentAdventure: null`.
+- [ ] Quit mid-Umbra. Relaunch. Game boots into `Adventuring` with the saved Umbra steps — no idle wait, no replay of the trippy roll, no return to grasslands.
+- [ ] Spot-check the `Adventuring.ApplyOutcome` switch: temporarily add a new sealed derived record (`record TestOutcome(...) : Outcome(...)`) and confirm the `default: throw UnreachableException` arm still fires on it (i.e. adding `BiomeShiftOutcome` didn't accidentally fall through). Revert.
+- [ ] Confirm `Biome.Umbra.GetInfo().PossibleEncounters.Length >= 1` at startup (debugger / breakpoint). Confirm `Biome.Umbra` is **not** referenced by any template in `AdventureGenerator.Templates` (i.e. Umbra is reachable only via shift).
+- [ ] Eyeball each Umbra encounter's option labels and outcome texts for 128 px fit at 6×8 font.
+- [ ] Inspect `save.json` shape after a shift: `CurrentAdventure.RemainingSteps` is a fresh list of `(Umbra, <encounter>)` pairs; the pre-shift steps are gone.
