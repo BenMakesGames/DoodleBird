@@ -110,3 +110,35 @@ New files in `PetDoodle/Biomes/` (folder name suggestion). `BiomeInfo` is the se
 - [ ] Attempt to construct `new EncounterOption { Label = "test", Kind = OptionKind.Engage, Outcomes = [] }` — confirm the ctor (or required-init validation) throws.
 - [ ] Construct a valid `EncounterOption` with one `FlavorOutcome("hello")` — succeeds, properties round-trip.
 - [ ] `Biome.Grasslands.GetInfo().SkyColor == DawnBringers16.LightBlue` and `.GroundColor == DawnBringers16.DarkGreen`. (These match the live `Playing.Draw` colors.)
+
+## Learnings
+
+### Architectural decisions
+- **Open Decision 1 (biome colors) resolved against `docs/colors.md` 16-entry palette.** Only 16 named values exist — picks snap to the nearest. Final set: River sky=LightBlue / ground=Blue; Jungle sky=Green / ground=DarkGreen (no "pale green" in palette — Green is the lightest green); Cave sky=Black / ground=Brown; Mountain sky=LightGray / ground=DarkGray; MountainPeak sky=White / ground=LightGray; Waterfall sky=LightBlue / ground=Blue (same as River for now — biome design tickets will iterate); Beach sky=LightBlue / ground=Yellow; Lagoon sky=LightBlue / ground=DarkBlue (palette has no teal/cyan distinct from LightBlue — DarkBlue gives the deepest contrast). Grasslands fixed by acceptance criterion.
+- **Open Decision 2 (`PossibleEncounters` type): `Encounter[]`.** Default kept. Per-biome tickets rebuild the full `BiomeInfo` record when appending; immutable record + array is the simplest pit-of-success shape.
+- **Open Decision 3 (`Outcomes` type): `Outcome[]`.** Default kept; matches `PossibleEncounters`.
+- **Open Decision 4 (where to enforce non-empty `Outcomes`): both.** Ctor init-accessor guard on `EncounterOption.Outcomes` throws `ArgumentException` for null/empty; `EncounterExtensions` static-ctor sanity check double-guards by iterating every authored option. The ctor guard fails fast at the construction site; the static check catches deserialisation / direct-dictionary-construction edge cases. Both are cheap, both stay.
+- **Open Decision 5 (Outcome naming): verbose (`FlavorOutcome` / `SubstituteOutcome` / `EndAdventureOutcome`).** Default kept. Mirrors `EncounterOption` / `OptionKind` density; switch-expression arms read clearly.
+- **`required` + `init` validation pattern on `EncounterOption.Outcomes`.** Used a backing field with validation inside the `init` accessor instead of a positional ctor. Reason: keeps `required` semantics for all three properties (`Label`, `Kind`, `Outcomes`) consistent, lets callers use object-initialiser syntax, and the guard fires at exactly the assignment that violates the invariant.
+- **`EncounterExtensions` sanity check uses hard throw (`InvalidOperationException`), not `Debug.Assert`.** Ticket said pick one consistently; matches `BiomeExtensions`'s hard throw on count mismatch. `Debug.Assert` would silently disappear in Release builds — the invariant matters at runtime as content lands.
+
+### Problems encountered
+- **No PetDoodle ProjectReference from test project.** Test Plan items for `EncounterOption` ctor guard and round-trip are written as manual debug-session checks; the test project has no path to reach `EncounterOption` without adding a ProjectReference (would cascade MonoGame deps). T2's Learnings already deferred the same pattern. Sanity check on construction is exercised at app startup via the `EncounterExtensions` static ctor — would fire on first authored encounter if outcomes were empty.
+
+### Interesting tidbits
+- **`FrozenDictionary` static-ctor initialisation pattern** comes from `System.Collections.Frozen` (BCL, .NET 8+); `.ToFrozenDictionary()` extension on any `IDictionary`/`IEnumerable<KVP>`. Build once, read forever. `Info[encounter]` indexer throws `KeyNotFoundException` on miss — the indexer is the right choice over `TryGetValue` under `WarningsAsErrors=Nullable` because the return type stays non-nullable.
+- **Empty `Encounter` enum still compiles into a usable `FrozenDictionary<Encounter, EncounterInfo>`.** The dictionary is empty; the `foreach` sanity check is a no-op until per-biome tickets author entries. `GetInfo()` on any `Encounter` value would throw `KeyNotFoundException`, but no values exist to call it with yet.
+- **Palette constraint: 16 colors total** (`docs/colors.md`). Color picks for biomes are deliberately coarse — no off-palette mixes. The eight non-Grasslands biomes share a lot of `LightBlue` skies because that's the only blue-bright entry; differentiation comes from ground.
+
+### Workarounds / limitations
+- None structural — all decisions fit cleanly within the existing palette and dictionary patterns.
+
+### Related areas affected
+- `PetDoodle/Biomes/` and `PetDoodle/Encounters/` folders introduced. Future per-biome design tickets add new `Encounter` enum values in `PetDoodle.Data`, then drop `EncounterInfo` entries into `EncounterExtensions.Info` and rebuild the relevant `BiomeInfo` entry to append the new encounter to `PossibleEncounters`.
+- `Playing.Draw` still uses literal `DawnBringers16.LightBlue` / `DawnBringers16.DarkGreen`. Out of scope here — T4's `Adventuring` state is the consumer that will switch to `biome.GetInfo()`-driven colors.
+
+### Rejected alternatives
+- **Positional ctor with body validation on `EncounterOption`** — would have required dropping `required` on the three properties or duplicating them; the init-accessor approach kept the object-initialiser ergonomics consumers expect.
+- **`Debug.Assert` for sanity checks** — silently disappears in Release. Hard throw is consistent across both `BiomeExtensions` and `EncounterExtensions` and surfaces authoring mistakes loudly.
+- **Splitting `Outcome` records into separate files** — kept all four in `Outcome.cs`. The hierarchy is small, related, and read together; splitting noisy.
+- **Adding a PetDoodle ProjectReference to the test project just for ctor-guard / round-trip tests** — same trade-off T2 deferred. Ctor invariant is simple and exercised at every construction site; not worth dragging MonoGame into the test project.
