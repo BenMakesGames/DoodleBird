@@ -1,4 +1,5 @@
 <Solution>
   <Project Path="PetDoodle.Data/PetDoodle.Data.csproj" />
+  <Project Path="PetDoodle.Tests/PetDoodle.Tests.csproj" />
   <Project Path="PetDoodle/PetDoodle.csproj" />
 </Solution>

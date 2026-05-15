@@ -1,7 +1,9 @@
-﻿using BenMakesGames.PlayPlayMini;
+﻿using Autofac;
+using BenMakesGames.PlayPlayMini;
 using BenMakesGames.PlayPlayMini.Model;
 using PetDoodle;
 using PetDoodle.GameStates;
+using PetDoodle.Persistence;
 using Serilog.Extensions.Autofac.DependencyInjection;
 using Serilog;
 
@@ -43,6 +45,8 @@ gsmBuilder
         ;
 
         s.RegisterSerilog(loggerConfig);
+
+        s.RegisterType<SaveService>().AsSelf().SingleInstance();
     })
 ;
 

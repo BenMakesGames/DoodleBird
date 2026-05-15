@@ -4,6 +4,7 @@ using BenMakesGames.PlayPlayMini.GraphicsExtensions;
 using BenMakesGames.PlayPlayMini.Services;
 using Microsoft.Xna.Framework;
 using PetDoodle.Data;
+using PetDoodle.Persistence;
 
 namespace PetDoodle.GameStates;
 
@@ -13,12 +14,14 @@ public sealed class Startup: GameState
     private GraphicsManager Graphics { get; }
     private GameStateManager GSM { get; }
     private MouseManager Mouse { get; }
+    private SaveService SaveService { get; }
 
-    public Startup(GraphicsManager graphics, GameStateManager gsm, MouseManager mouse)
+    public Startup(GraphicsManager graphics, GameStateManager gsm, MouseManager mouse, SaveService saveService)
     {
         Graphics = graphics;
         GSM = gsm;
         Mouse = mouse;
+        SaveService = saveService;
 
         Mouse.UseCustomCursor(Pictures.Cursor, (3, 1));
     }
@@ -30,7 +33,7 @@ public sealed class Startup: GameState
     {
         if (Graphics.FullyLoaded)
         {
-            var gameData = new GameData()
+            var gameData = SaveService.Load() ?? new GameData()
             {
                 Bird = new Bird()
                 {

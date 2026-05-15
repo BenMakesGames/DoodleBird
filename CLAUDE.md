@@ -1,4 +1,4 @@
-We value:
+Do not blindly copy existing patterns. We value:
 
 * Null safety, data integrity, & exhaustiveness through defensive programming
 * Creating ergonomic APIs with pits of success

@@ -101,3 +101,31 @@ At the top of the `if (Graphics.FullyLoaded)` branch, call `SaveService.Load()`.
 - [ ] Open `%AppData%/PetDoodle/Saves/save.json` after a manual save — confirm `Biome` values appear as strings (`"Grasslands"`, `"River"`), and the file is human-readable (indented).
 - [ ] Corrupt the save file (delete a closing brace), relaunch the game. Launch still succeeds (falls back to default GameData), an error is logged.
 - [ ] Inspect `PetDoodle.Data` compiled output — still no MonoGame, no PlayPlayMini, no `System.Text.Json` reference.
+
+## Learnings
+
+### Architectural decisions
+- **Open Decisions all defaulted**: (1) `JsonStringEnumConverter` for human-readable saves; (2) `List<AdventureStep>` (mutable, JSON-friendly, `RemoveAt(0)` for pop); (3) plain `SaveService` class, no interface — DI-registered `AsSelf().SingleInstance()`; (4) hard-coded `SaveFilePath` from `DirectoryHelpers.SaveDirectory`. No code-reading reasons surfaced to deviate.
+- **Static `JsonSerializerOptions` field on `SaveService`.** `JsonSerializerOptions` caches converter chains internally — re-creating it per call is wasteful, and the docs explicitly recommend a single shared instance. Made `private static readonly`.
+- **`?? new GameData { … }` collapses the load-or-default branch in `Startup`.** Cleaner than `if (loaded != null) … else …`. Bird default construction is the right-hand side and only runs when the save is missing or corrupt.
+- **Atomic write via `File.WriteAllText` + `File.Move(..., overwrite: true)`.** Ticket allowed either `File.Move` or `File.Replace`; `Move` with `overwrite: true` is fine since there is no third "backup" file to maintain, and `File.Replace` requires the destination to exist (would break the first-save case).
+
+### Problems encountered
+- **`Autofac.ContainerBuilder.RegisterType` lives in the `Autofac` namespace, not `Serilog.Extensions.Autofac.DependencyInjection`.** Adding the `s.RegisterType<SaveService>()…` line required adding `using Autofac;` to `Program.cs`; without it the call site sees no extension methods. The Serilog using is only for the `RegisterSerilog` extension.
+
+### Interesting tidbits
+- **`public enum Encounter { }` compiles.** Zero-value enums are valid C#. `default(Encounter)` yields the integer-zero value, which is **not a named member** — assigning to a typed variable still type-checks, but a switch over the enum has nothing to match. Per-biome tickets land actual members.
+- **`DirectoryHelpers.EnsureDirectoryExists()` runs at program start (`Program.cs` line 11)** before any state activates. `SaveService` therefore doesn't have to create `Saves/` itself — it can assume the directory exists.
+
+### Workarounds / limitations
+- None — straightforward implementation.
+
+### Related areas affected
+- `GameData` gained a mutable nullable property (`CurrentAdventure`) alongside its existing `required init` `Bird`. Future code that constructs `GameData` does not need to set `CurrentAdventure` (defaults to null).
+- `Startup` ctor now takes a 4th dependency (`SaveService`); any future game state that wants to bootstrap from save can follow the same pattern (constructor inject the singleton, call `Load()`).
+- T4 (adventure generation) and T6 (outcome resolution) are the **save trigger sites**; this ticket leaves `SaveService.Save` uncalled. That is intentional per the Out-of-scope list.
+
+### Rejected alternatives
+- **Interface + impl for `SaveService`** (Open Decision 3): not needed. Single implementation, no testing trick required by the ticket. YAGNI.
+- **Constructor-injected save path** (Open Decision 4): Same reasoning — single launch-time path, no test demands injection. Hard-coded.
+- **Manual round-trip unit test in `PetDoodle.Tests`**: ticket's Test Plan is intentionally manual (the test project would need a new ProjectReference to `PetDoodle` to reach `SaveService`, and the file I/O makes it an integration test, not a unit). Deferred unless a behavior bug forces it.
