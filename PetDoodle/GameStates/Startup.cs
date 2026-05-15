@@ -34,8 +34,6 @@ public sealed class Startup: GameState
             {
                 Bird = new Bird()
                 {
-                    X = 20,
-                    TargetX = 100,
                     Name = "Alain",
                 }
             };
