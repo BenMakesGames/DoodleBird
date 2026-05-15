@@ -421,6 +421,24 @@ public static class EncounterExtensions
                 },
             ]),
 
+            [Encounter.Thunderstorm] = new("Thunderstorm", [
+                new EncounterOption
+                {
+                    Label = "Catch lightning",
+                    Outcomes =
+                    [
+                        new FlavorOutcome("Caught it!"),
+                        new FlavorOutcome("Missed it."),
+                        new EndAdventureOutcome("Zapped! Home."),
+                    ],
+                },
+                new EncounterOption
+                {
+                    Label = "Take Shelter",
+                    Outcomes = [new FlavorOutcome("Waited it out.")],
+                },
+            ]),
+
             [Encounter.LongAbandonedVillage] = new("Abandoned Village", [
                 new EncounterOption
                 {

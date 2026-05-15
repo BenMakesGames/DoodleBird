@@ -17,7 +17,7 @@ public static class BiomeExtensions
             [Biome.Jungle]       = new("Jungle",        DawnBringers16.Green,     DawnBringers16.DarkGreen, [Encounter.CarnivorousPlant, Encounter.Quicksand, Encounter.NanerTree, Encounter.LongAbandonedVillage]),
             [Biome.Cave]         = new("Cave",          DawnBringers16.Black,     DawnBringers16.Brown,     [Encounter.GlowingMushrooms, Encounter.GiantBat, Encounter.LargeBoulder]),
             [Biome.Mountain]     = new("Mountain",      DawnBringers16.LightGray, DawnBringers16.DarkGray,  [Encounter.LimestoneGolem, Encounter.SteepClimb, Encounter.Griffin]),
-            [Biome.MountainPeak] = new("Mountain Peak", DawnBringers16.White,     DawnBringers16.LightGray, []),
+            [Biome.MountainPeak] = new("Mountain Peak", DawnBringers16.White,     DawnBringers16.LightGray, [Encounter.Thunderstorm]),
             [Biome.Waterfall]    = new("Waterfall",     DawnBringers16.LightBlue, DawnBringers16.Blue,      [Encounter.WaterfallDrop]),
             [Biome.Beach]        = new("Beach",         DawnBringers16.LightBlue, DawnBringers16.Yellow,    [Encounter.Sandcastle, Encounter.PurpleSeaweed, Encounter.AggressiveSeagull]),
             [Biome.Lagoon]       = new("Lagoon",        DawnBringers16.LightBlue, DawnBringers16.DarkBlue,  [Encounter.MusclyTrout, Encounter.Mermaid]),

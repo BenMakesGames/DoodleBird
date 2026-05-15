@@ -27,4 +27,5 @@ public enum Encounter
     Griffin,
     WaterfallDrop,
     Mermaid,
+    Thunderstorm,
 }
