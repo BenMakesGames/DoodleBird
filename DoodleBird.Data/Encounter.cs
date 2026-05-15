@@ -26,4 +26,5 @@ public enum Encounter
     SteepClimb,
     Griffin,
     WaterfallDrop,
+    Mermaid,
 }

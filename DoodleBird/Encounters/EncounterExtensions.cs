@@ -409,6 +409,18 @@ public static class EncounterExtensions
                 },
             ]),
 
+            [Encounter.Mermaid] = new("Mermaid", [
+                new EncounterOption
+                {
+                    Label = "Listen",
+                    Outcomes =
+                    [
+                        new FlavorOutcome("Words made no sense."),
+                        new FlavorOutcome("Sang with her!"),
+                    ],
+                },
+            ]),
+
             [Encounter.LongAbandonedVillage] = new("Abandoned Village", [
                 new EncounterOption
                 {

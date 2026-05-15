@@ -20,7 +20,7 @@ public static class BiomeExtensions
             [Biome.MountainPeak] = new("Mountain Peak", DawnBringers16.White,     DawnBringers16.LightGray, []),
             [Biome.Waterfall]    = new("Waterfall",     DawnBringers16.LightBlue, DawnBringers16.Blue,      [Encounter.WaterfallDrop]),
             [Biome.Beach]        = new("Beach",         DawnBringers16.LightBlue, DawnBringers16.Yellow,    [Encounter.Sandcastle, Encounter.PurpleSeaweed, Encounter.AggressiveSeagull]),
-            [Biome.Lagoon]       = new("Lagoon",        DawnBringers16.LightBlue, DawnBringers16.DarkBlue,  []),
+            [Biome.Lagoon]       = new("Lagoon",        DawnBringers16.LightBlue, DawnBringers16.DarkBlue,  [Encounter.MusclyTrout, Encounter.Mermaid]),
         }.ToFrozenDictionary();
 
         if (Info.Count != Enum.GetValues<Biome>().Length)
