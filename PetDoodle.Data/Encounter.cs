@@ -10,4 +10,8 @@ public enum Encounter
     FightSquirrel,
     MusclyTrout,
     Rapids,
+    Sandcastle,
+    PurpleSeaweed,
+    AggressiveSeagull,
+    StartledCrab,
 }

@@ -168,6 +168,92 @@ public static class EncounterExtensions
                     ],
                 },
             ]),
+
+            [Encounter.Sandcastle] = new("Sandcastle", [
+                new EncounterOption
+                {
+                    Label = "Investigate",
+                    Kind = OptionKind.Engage,
+                    Outcomes =
+                    [
+                        new FlavorOutcome("Empty inside."),
+                        new SubstituteOutcome("A crab inside!", Encounter.StartledCrab),
+                    ],
+                },
+                new EncounterOption
+                {
+                    Label = "Destroy",
+                    Kind = OptionKind.Engage,
+                    Outcomes =
+                    [
+                        new FlavorOutcome("Stomped flat."),
+                        new FlavorOutcome("Crab fled to sea."),
+                    ],
+                },
+                new EncounterOption
+                {
+                    Label = "Ignore",
+                    Kind = OptionKind.Ignore,
+                    Outcomes = [new FlavorOutcome("Hopped past.")],
+                },
+            ]),
+
+            [Encounter.PurpleSeaweed] = new("Purple Seaweed", [
+                new EncounterOption
+                {
+                    Label = "Eat",
+                    Kind = OptionKind.Engage,
+                    Outcomes =
+                    [
+                        new FlavorOutcome("Tasty!"),
+                        new FlavorOutcome("Bitter. Yuck!"),
+                    ],
+                },
+                new EncounterOption
+                {
+                    Label = "Ignore",
+                    Kind = OptionKind.Ignore,
+                    Outcomes = [new FlavorOutcome("Hopped past.")],
+                },
+            ]),
+
+            [Encounter.AggressiveSeagull] = new("Aggressive Seagull", [
+                new EncounterOption
+                {
+                    Label = "Intimidate",
+                    Kind = OptionKind.Engage,
+                    Outcomes =
+                    [
+                        new FlavorOutcome("Seagull flew off."),
+                        new EndAdventureOutcome("Tackled! Home."),
+                    ],
+                },
+                new EncounterOption
+                {
+                    Label = "Retreat",
+                    Kind = OptionKind.Retreat,
+                    Outcomes = [new EndAdventureOutcome("Flapped home!")],
+                },
+            ]),
+
+            [Encounter.StartledCrab] = new("Startled Crab", [
+                new EncounterOption
+                {
+                    Label = "Peck",
+                    Kind = OptionKind.Engage,
+                    Outcomes =
+                    [
+                        new FlavorOutcome("Crab scuttled off."),
+                        new EndAdventureOutcome("Pinched. Home."),
+                    ],
+                },
+                new EncounterOption
+                {
+                    Label = "Ignore",
+                    Kind = OptionKind.Ignore,
+                    Outcomes = [new FlavorOutcome("Hopped past.")],
+                },
+            ]),
         }.ToFrozenDictionary();
 
         foreach (var (encounter, info) in Info)
