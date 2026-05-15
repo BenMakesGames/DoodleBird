@@ -16,22 +16,36 @@ public sealed class Startup: GameState
     private MouseManager Mouse { get; }
     private SaveService SaveService { get; }
 
-    public Startup(GraphicsManager graphics, GameStateManager gsm, MouseManager mouse, SaveService saveService)
+    private int TipWidth { get; }
+    private int TipHeight { get; }
+    private string Tip { get; }
+    private double TTL { get; set; } = 3;
+
+    public Startup(
+        GraphicsManager graphics, GameStateManager gsm, MouseManager mouse, SaveService saveService,
+        TipService tipService
+    )
     {
         Graphics = graphics;
         GSM = gsm;
         Mouse = mouse;
         SaveService = saveService;
 
+        Tip = tipService.CurrentTip;
+
+        var lines = Tip.Split('\n');
+        var longestLine = lines.Max(line => line.Length);
+        TipWidth = longestLine * 6;
+        TipHeight = lines.Length * 9;
+
         Mouse.UseCustomCursor(Pictures.Cursor, (3, 1));
     }
 
-    // note: you do NOT need to call the `base.` for lifecycle methods. so save some CPU cycles,
-    // and don't call them :P
-
     public override void Update(GameTime gameTime)
     {
-        if (Graphics.FullyLoaded)
+        TTL -= gameTime.ElapsedGameTime.TotalSeconds;
+
+        if (TTL <= 0 && Graphics.FullyLoaded)
         {
             var gameData = SaveService.Load() ?? new GameData()
             {
@@ -51,7 +65,7 @@ public sealed class Startup: GameState
     {
         Graphics.Clear(DawnBringers16.Black);
 
-        Graphics.DrawWavyText("Font", gameTime, "Loading...", DawnBringers16.White);
+        Graphics.DrawText("Font", (Graphics.Width - TipWidth) / 2, (Graphics.Height - TipHeight) / 2, Tip, DawnBringers16.LightGray);
 
         Mouse.Draw(this);
     }

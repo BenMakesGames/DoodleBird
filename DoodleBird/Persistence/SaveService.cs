@@ -7,7 +7,7 @@ namespace DoodleBird.Persistence;
 
 public sealed class SaveService
 {
-    private static readonly string SaveFilePath = Path.Combine(DirectoryHelpers.SaveDirectory, "save.json");
+    private static readonly string SaveFilePath = Path.Combine(DirectoryHelpers.SaveDirectory, "Bird.json");
     private static readonly string TempFilePath = SaveFilePath + ".tmp";
 
     private static readonly JsonSerializerOptions Options = new()
