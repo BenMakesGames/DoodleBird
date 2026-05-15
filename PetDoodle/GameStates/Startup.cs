@@ -1,5 +1,6 @@
 using BenMakesGames.MonoGame.Palettes;
 using BenMakesGames.PlayPlayMini;
+using BenMakesGames.PlayPlayMini.GraphicsExtensions;
 using BenMakesGames.PlayPlayMini.Services;
 using Microsoft.Xna.Framework;
 using PetDoodle.Data;
@@ -19,7 +20,7 @@ public sealed class Startup: GameState
         GSM = gsm;
         Mouse = mouse;
 
-        Mouse.UseCustomCursor("Cursor", (3, 1));
+        Mouse.UseCustomCursor(Pictures.Cursor, (3, 1));
     }
 
     // note: you do NOT need to call the `base.` for lifecycle methods. so save some CPU cycles,
@@ -34,6 +35,7 @@ public sealed class Startup: GameState
                 Bird = new Bird()
                 {
                     X = 20,
+                    TargetX = 100,
                     Name = "Alain",
                 }
             };
@@ -47,6 +49,8 @@ public sealed class Startup: GameState
     public override void Draw(GameTime gameTime)
     {
         Graphics.Clear(DawnBringers16.Black);
+
+        Graphics.DrawWavyText("Font", gameTime, "Loading...", DawnBringers16.White);
 
         Mouse.Draw(this);
     }

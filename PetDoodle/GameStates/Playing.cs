@@ -11,14 +11,18 @@ public sealed record PlayingConfig(GameData GameData);
 // sealed classes execute faster than non-sealed, so always seal your game states!
 public sealed class Playing: GameState<PlayingConfig>
 {
+    private const float BirdSpeed = 45f;
+    private const float FixedTickStep = BirdSpeed / 60f;
+
     private GraphicsManager Graphics { get; }
     private GameStateManager GSM { get; }
     private MouseManager Mouse { get; }
 
     private GameData GameData { get; }
+    private BirdRenderer Renderer { get; }
 
     public Playing(
-        GameData gameData,
+        PlayingConfig config,
         GraphicsManager graphics, GameStateManager gsm, MouseManager mouse
     )
     {
@@ -26,7 +30,8 @@ public sealed class Playing: GameState<PlayingConfig>
         GSM = gsm;
         Mouse = mouse;
 
-        GameData = gameData;
+        GameData = config.GameData;
+        Renderer = new BirdRenderer();
     }
 
     // overriding lifecycle methods is optional; feel free to delete any overrides you're not using.
@@ -40,13 +45,24 @@ public sealed class Playing: GameState<PlayingConfig>
 
     public override void FixedUpdate(GameTime gameTime)
     {
-        // TODO: update game objects based on user input, AI logic, etc
-        // called 60 times per second regardless of frame rate; useful for physics logic
+        var bird = GameData.Bird;
+        if (bird.TargetX is { } target)
+        {
+            if (MathF.Abs(target - bird.X) <= FixedTickStep)
+            {
+                bird.X = target;
+                bird.TargetX = null;
+            }
+            else
+            {
+                bird.X += target > bird.X ? FixedTickStep : -FixedTickStep;
+            }
+        }
     }
 
     public override void Update(GameTime gameTime)
     {
-        // TODO: update game objects based on user input, AI logic, etc
+        Renderer.Update(GameData.Bird, gameTime);
     }
 
     public override void Draw(GameTime gameTime)
@@ -55,6 +71,8 @@ public sealed class Playing: GameState<PlayingConfig>
 
         Graphics.DrawFilledRectangle(0, Graphics.Height - 8, Graphics.Width, 8, DawnBringers16.DarkGreen);
         Graphics.DrawPicture(Pictures.TopGrass, 0, Graphics.Height - 10);
+
+        Renderer.Draw(GameData.Bird, Graphics);
 
         Mouse.Draw(this);
     }

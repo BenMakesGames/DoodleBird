@@ -4,4 +4,5 @@ public class Bird
 {
     public required string Name { get; set; }
     public required float X { get; set; }
+    public float? TargetX { get; set; }
 }

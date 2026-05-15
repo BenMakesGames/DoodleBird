@@ -96,3 +96,30 @@ In `Startup.Update`, where the `GameData` is built, also set `Bird.TargetX` to a
 - [ ] Idle bird (no `TargetX`) keeps the facing it had at the moment the target was cleared (sticky).
 - [ ] No visible pixel jitter while walking — confirms float-to-int rounding at the draw boundary.
 - [ ] Inspect `PetDoodle.Data.csproj` and its compiled output: no MonoGame, no PlayPlayMini, no `Microsoft.Xna.*` references.
+
+## Learnings
+
+### Architectural decisions
+- **Renderer reads `Bird`, never writes.** Hop phase, last-X, sticky facing all live on `BirdRenderer`. `Bird` stays a POCO; renderer takes `Bird` snapshots per-frame. Reinforces the data-side/view-side split the ticket called out.
+- **`Renderer.Update` runs from `Playing.Update` (frame rate), not `FixedUpdate` (60 Hz).** Sim mutates `Bird.X` in `FixedUpdate`; renderer reads what's there each frame. Multiple frames may see the same `bird.X` (delta 0); that's fine — hop phase only advances on actual motion.
+- **First-frame detection via `float?`** for `LastX` rather than NaN sentinel. Matches `CLAUDE.md` null-safety value; pattern-matched with `is { } lastX` semantics. No sentinel-vs-NaN ambiguity.
+- **Open Decisions resolved**: speed 30 px/sec, hop wavelength 4 px, half-sine curve, snap-on-overshoot (no separate epsilon), default facing right, `new BirdRenderer()` in `Playing` ctor (not DI).
+
+### Interesting tidbits
+- `GraphicsManager.Pictures` is an `IReadOnlyDictionary<string, Texture2D>` — indexable from outside for sprite metadata (`.Height`, `.Width`) without re-loading assets. Used here to anchor feet to the grass band without hard-coding sprite height.
+- `DrawPictureWithTransformations` takes **center** coords (not top-left like `DrawPicture`). Mixing the two unflagged is a half-sprite offset bug waiting to happen. Used the transformations variant unconditionally so flipped/unflipped share the anchor math.
+- Logical resolution is 128×32; everything must pixel-snap. `MathF.Round → (int)` at the draw boundary is the canonical place to do it. Snapping earlier (e.g., on `Bird.X` itself) would break sub-pixel motion accumulation in the sim.
+
+### Rejected alternatives
+- **`BirdAction` enum / on-arrive dispatch**: ticket-explicit out-of-scope. Punt until an actual action exists.
+- **Animating in `FixedUpdate`**: rejected — animation should track frame rate, not the fixed tick. Sim mutation only in `FixedUpdate`; view interpolation in `Update`.
+- **NaN sentinel for first-frame `LastX`**: viable but worse — implicit, easy to forget. `float?` makes the "uninitialized" state visible at the type level.
+
+### Post-feedback fixes
+- **Bird y-anchor**: moved feet from `Height - 8` to `Height - 6` (2 px lower) for depth illusion against grass band.
+- **Speed/wavelength tune**: settled on `BirdSpeed = 45 px/sec`, `HopWavelength = 6 px` after iterating. Hop cycles/sec = speed/wavelength = 7.5 — keeping speed and wavelength scaled together preserves the perceived hop rate while letting the walk speed change. Worth remembering: distance-keyed hops decouple cleanly from walk speed only if wavelength scales with speed.
+- **Hop-phase reset on arrival**: walk could stop mid-hop, leaving the bird floating at a non-zero `yOffset`. Fix: when `TargetX is null`, force `HopPhase = 0`. Don't reset on `delta == 0` — `Update` runs faster than `FixedUpdate`, so most idle-between-tick frames have zero delta even while walking. `TargetX` is the correct stop signal.
+
+### Related areas affected
+- `PetDoodle.Data.Bird` schema changed (added `TargetX`). Any future save-game / migration code must handle the nullable.
+- `Playing.Update` now does work; previously a no-op. If future game states copy from `Playing` as a template, they'll inherit the renderer-update pattern.

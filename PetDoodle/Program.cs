@@ -23,10 +23,11 @@ gsmBuilder
     .AddAssets([
         new FontMeta("Font", [
             new FontSheetMeta("Graphics/Font", 6, 8) { VerticalSpacing = 1, HorizontalSpacing = 0 }
-        ]),
-        new PictureMeta(Pictures.Cursor, "Graphics/Cursor", true),
-        new PictureMeta(Pictures.TopGrass, "Graphics/TopGrass", true),
-        new PictureMeta(Pictures.Bird, "Graphics/Bird", true),
+        ], preLoaded: true),
+        new PictureMeta(Pictures.Cursor, preLoaded: true),
+
+        new PictureMeta(Pictures.TopGrass),
+        new SpriteSheetMeta(Pictures.Bird, 15, 15),
 
         // new FontMeta(...)
         // new PictureMeta(...)
