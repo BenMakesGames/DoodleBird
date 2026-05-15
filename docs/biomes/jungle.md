@@ -23,10 +23,10 @@ exist in the 16-color palette.
 
 A plant with a maw. Two options across the engage / ignore spread.
 
-| Option | Kind | Outcomes |
-|---|---|---|
-| Ignore | Ignore | Flavor "Hopped past." |
-| Look inside | Engage | EndAdventure "Chomped! Home." · Flavor "Saved a butterfly!" |
+| Option | Outcomes |
+|---|---|
+| Ignore | Flavor "Hopped past." |
+| Look inside | EndAdventure "Chomped! Home." · Flavor "Saved a butterfly!" |
 
 Look inside is a 50/50 between catastrophe (end-adventure) and a
 freebie save. Mirrors grasslands `GiantToad` / beach `AggressiveSeagull`
@@ -42,9 +42,9 @@ canonical "deterministic no-op pass" string.
 A patch of quicksand. **Single-option encounter** — see AC carve-out
 below.
 
-| Option | Kind | Outcomes |
-|---|---|---|
-| Get out! | Engage | Flavor "Wriggled free." · EndAdventure "Exhausted. Home." |
+| Option | Outcomes |
+|---|---|
+| Get out! | Flavor "Wriggled free." · EndAdventure "Exhausted. Home." |
 
 A 50/50 risk on the one option: either escape clean, or burn all energy
 and head home. Mirrors river `Rapids` shape exactly — same single-option
@@ -58,10 +58,10 @@ SubstituteOutcome target from `LongAbandonedVillage.Explore`, but is
 
 A banana ("naner") tree. Two options.
 
-| Option | Kind | Outcomes |
-|---|---|---|
-| Climb | Engage | Flavor "Naners! Tasty!" · Substitute → NanerBird |
-| Ignore | Ignore | Flavor "Hopped past." |
+| Option | Outcomes |
+|---|---|
+| Climb | Flavor "Naners! Tasty!" · Substitute → NanerBird |
+| Ignore | Flavor "Hopped past." |
 
 Climb is a 50/50 between a flavor freebie ("Naners! Tasty!") and a chain
 into the NanerBird substitute target. Modelled on grasslands `LoneTree`
@@ -77,18 +77,18 @@ A long-abandoned jungle village. Display name shortened from the spec's
 fit the 128 px / 6×8-font budget; enum value `LongAbandonedVillage`
 preserves the spec name.
 
-| Option | Kind | Outcomes |
-|---|---|---|
-| Explore | Engage | Flavor "Weird machines!" · Substitute → Quicksand · Substitute → Snake · Flavor "Nothing inside." |
-| Ignore | Ignore | Flavor "Hopped past." |
+| Option | Outcomes |
+|---|---|
+| Explore | Flavor "Weird machines!" · Substitute → Quicksand · Substitute → Snake · Flavor "Nothing inside." |
+| Ignore | Flavor "Hopped past." |
 
 Explore is the **highest-variance option in the codebase today** — four
 outcomes, uniform 25/25/25/25. Two flavor branches (interesting find,
 nothing), two substitute branches into existing pool encounters
 (Quicksand from this biome, Snake from grasslands). The substitute into
 grasslands `Snake` is a cross-biome chain — first one in the codebase.
-Snake's existing two-option Engage+Ignore shape works fine for a jungle
-context; no rebuild needed.
+Snake's existing two-option shape works fine for a jungle context; no
+rebuild needed.
 
 Spec said "33/33/33" but listed four outcomes — taken as a literal
 4-element array (25/25/25/25), confirmed with user.
@@ -103,10 +103,10 @@ when another encounter's `SubstituteOutcome` swaps them in.
 Reached from NanerTree → Climb. A bird in the canopy babbling
 nonsense. Two options.
 
-| Option | Kind | Outcomes |
-|---|---|---|
-| Listen | Engage | Flavor "Words made no sense." |
-| Ignore | Ignore | Flavor "Ate naners. Tasty!" |
+| Option | Outcomes |
+|---|---|
+| Listen | Flavor "Words made no sense." |
+| Ignore | Flavor "Ate naners. Tasty!" |
 
 Listen ships single-outcome today. Both options are essentially safe
 flavor — Naner Bird is a *curiosity* encounter, not a fight or hazard,
@@ -152,15 +152,15 @@ Naner Bird's perch).
   GlowingMushrooms deferral — the intended second outcome needs a
   mechanic that doesn't exist yet. Captured in the deferral note
   above; biome-umbra ticket appends.
-- **No `Retreat` option on any jungle encounter.** All five jungle
-  encounters use Engage / Ignore only. Same shape as river — `Retreat`
-  is *common*, not guaranteed. Carnivorous Plant could have had a
-  Retreat option (flee-the-maw), but the Look inside risk shape is
-  already a clean 50/50; adding Retreat would dilute the bite. Naner
-  Bird is too low-stakes to need Retreat. Quicksand's "Get out!" is
-  semantically the retreat already (Engage in kind, but the player is
-  fleeing the hazard, not engaging it). Future ticket can revisit if a
-  design need surfaces.
+- **No retreat-style option on any jungle encounter.** No jungle option
+  ships a single-`EndAdventureOutcome` escape; same shape as river. A
+  retreat-style option is *common*, not guaranteed. Carnivorous Plant
+  could have had a flee-the-maw option, but the Look inside risk shape
+  is already a clean 50/50; adding an escape would dilute the bite. Naner
+  Bird is too low-stakes to need one. Quicksand's "Get out!" is
+  semantically the escape already — the player is fleeing the hazard,
+  even though "Get out!" is the active commit rather than a separate
+  retreat button. Future ticket can revisit if a design need surfaces.
 - **`Abandoned Village` display name dropped "Long-".** Display name
   budget is ~21 chars at 6×8 font; "Long-Abandoned Village" overflows
   at 22 chars. Enum value `LongAbandonedVillage` keeps the spec name —

@@ -59,22 +59,17 @@
    - **(B) `biome-umbra` adopts shape (b) for everything.** Lobby for `biome-umbra` to land shape (b) `BiomeShiftOutcome(string Text, AdventureStep[] NewSteps)` instead of shape (a). Mushroom shift then authors `[(Umbra, encounter), (Umbra, encounter)]` explicitly (each step's `Encounter` picked at construction-time or as a stable seed); this ticket authors `[(Jungle, <rolled>), (Beach, <rolled>)]` — but with the encounter rolled at *apply* time, the payload would need to be either (i) lazy / sentinel-valued, or (ii) a list of `(Biome, Encounter?)` where `null` means "roll at apply". That's a fair amount of design ergonomics. Pros: one record. Cons: mushroom shift loses its "uniform roll across umbra's pool" idiom unless authors hand-pick (which is a feature for them — Umbra is a curated experience anyway), and apply-time rolls need an explicit `Encounter?` or a separate `RolledAdventureStep` shape.
    - **(C) `BiomeShiftOutcome` keeps shape (a); extend the payload to a small DSL.** E.g. `BiomeShiftOutcome(string Text, IReadOnlyList<BiomeStepSpec> Steps)` where `BiomeStepSpec` is `record BiomeStepSpec(Biome Biome, Encounter? FixedEncounter)`. Mushroom shift gets `[(Umbra, null), (Umbra, null)]`; this ticket gets `[(Jungle, null), (Beach, null)]`. Hand-authoring a specific sequence is `[(Umbra, WhisperingSpore), (Umbra, EchoSelf)]`. Pros: one record, expressive for all three current/future shapes. Cons: more upfront design for one consumer, mild over-engineering risk if (A) would have sufficed.
    - **Default: (A) sibling record `ReplaceStepsOutcome(string Text, AdventureStep[] NewSteps)`** authored in *this* ticket. Lowest cross-ticket coordination cost — `biome-umbra` ships its default shape (a) unchanged; this ticket adds a clearly-named sibling. The two records can be unified later if a third caller appears with overlap. Implementer should briefly raise with user if (B) or (C) feels meaningfully better at implementation time. The encoded `AdventureStep[]` payload in shape (b)-style records hits the apply-time-roll question: each `AdventureStep` is a `(Biome, Encounter)` pair, so encounters have to be picked at construction. If the encounter pick should be at *apply* time, the new record is `record ReplaceStepsOutcome(string Text, IReadOnlyList<Biome> Biomes) : Outcome(Text)` — the resolver rolls a uniform encounter from each biome at apply time. **Sub-default within (A): `record ReplaceStepsOutcome(string Text, IReadOnlyList<Biome> Biomes)`**, since apply-time rolling preserves the anti-save-scum invariant uniformly with the rest of the system.
-2. **Outcome `OptionKind` for `"Swim to shore"`.** Three candidates:
-   - `Engage` — the bird actively chose to swim. Reads as a deliberate action.
-   - `Ignore` — the bird left the rapids, ignoring them. Lighter narrative weight, fits the "I'd rather not deal with this" framing.
-   - `Retreat` — the bird abandoned the river entirely. But `Retreat` per `docs/adventures.md` "cancels the entire adventure and returns the bird home immediately" — and this outcome **continues** the adventure (in different biomes). Retreat would be wrong.
-   - **Default: `Ignore`.** The bird is leaving the rapids without engaging the rocks, and the cross-biome shift is the consequence rather than a Retreat-style "go home". Implementer / user should call during the design pass, but `Engage` is the only other defensible pick; both fit.
-3. **Outcome flavor text.** Single outcome, single string. Must fit ~21 chars in 6×8 font @ 128 px. Suggested shortlist:
+2. **Outcome flavor text.** Single outcome, single string. Must fit ~21 chars in 6×8 font @ 128 px. Suggested shortlist:
    - `"Washed ashore."` (15)
    - `"Swept to the shore."` (19)
    - `"Caught a current."` (17)
    - `"To the shore!"` (13)
    - **Default: `"Washed ashore."`** — sets up the jungle-then-beach detour without overpromising. Implementer / user iterates.
-4. **Resolver helper name.** If shape (A) sub-default lands (`ReplaceStepsOutcome(Text, IReadOnlyList<Biome> Biomes)`), the apply-time helper on `Adventuring` is e.g. `ReplaceRemainingSteps(IReadOnlyList<Biome> biomes)`. If `biome-umbra` already named its helper `ShiftToBiome`, mirror that density — `ReplaceWithSteps`, `JumpThroughBiomes`, etc. **Default: `ReplaceRemainingSteps`.** Reads as the literal mutation it performs.
-5. **Whether the new outcome record (if any) lives in `Outcome.cs` or in a sibling file.** `biome-umbra` lands `BiomeShiftOutcome` in `Outcome.cs` (per its Implementation step 2). **Default: same file.** Splitting Outcome.cs is not justified by record count yet.
+3. **Resolver helper name.** If shape (A) sub-default lands (`ReplaceStepsOutcome(Text, IReadOnlyList<Biome> Biomes)`), the apply-time helper on `Adventuring` is e.g. `ReplaceRemainingSteps(IReadOnlyList<Biome> biomes)`. If `biome-umbra` already named its helper `ShiftToBiome`, mirror that density — `ReplaceWithSteps`, `JumpThroughBiomes`, etc. **Default: `ReplaceRemainingSteps`.** Reads as the literal mutation it performs.
+4. **Whether the new outcome record (if any) lives in `Outcome.cs` or in a sibling file.** `biome-umbra` lands `BiomeShiftOutcome` in `Outcome.cs` (per its Implementation step 2). **Default: same file.** Splitting Outcome.cs is not justified by record count yet.
 
 ## Acceptance Criteria
-- [ ] `Encounter.Rapids` in `EncounterExtensions.Info` has **2 options**: the existing `"Avoid rocks"` (unchanged) and a new `"Swim to shore"` (kind per Open Decision 2; default `Ignore`).
+- [ ] `Encounter.Rapids` in `EncounterExtensions.Info` has **2 options**: the existing `"Avoid rocks"` (unchanged) and a new `"Swim to shore"`.
 - [ ] The `"Swim to shore"` option has a non-empty `Outcomes` array containing **exactly one** outcome whose `Text` fits the 128-px-viewport / 6×8-font budget (≤~21 chars, eyeball verified).
 - [ ] That outcome's effect, when applied via `Adventuring.ApplyOutcome`, results in `GameData.CurrentAdventure.RemainingSteps` containing **exactly two** new `AdventureStep`s after the apply: the first has `Biome.Jungle` with an `Encounter` drawn uniformly at random from `Biome.Jungle.GetInfo().PossibleEncounters`; the second has `Biome.Beach` with an `Encounter` drawn uniformly at random from `Biome.Beach.GetInfo().PossibleEncounters`. The pre-existing remaining steps (post-Rapids tail of the original adventure, if any) are **gone**.
 - [ ] `SaveService.Save(GameData)` fires during the apply (so a quit mid-resolution preserves the new sub-adventure, not the pre-swim state).
@@ -103,7 +98,6 @@ Replace the existing single-option `Rapids` entry with one carrying both options
 new EncounterOption
 {
     Label = "Swim to shore",
-    Kind = OptionKind.Ignore,           // Open Decision 2 default
     Outcomes = [new ReplaceStepsOutcome("Washed ashore.", new[] { Biome.Jungle, Biome.Beach })],
 }
 ```
@@ -129,7 +123,7 @@ Then add the helper:
 ### 5. Update `docs/biomes/river.md`
 Rewrite the Rapids subsection to describe both options:
 - `"Avoid rocks"` (Engage): existing outcome distribution + intent — unchanged copy.
-- `"Swim to shore"` (Ignore — or whatever Open Decision 2 lands on): single outcome, replaces the rest of the adventure with a jungle step followed by a beach step (encounters rolled from each biome's pool at apply time). Capture the design intent: Rapids becomes the **biome-shift waypoint** of the river, mirroring the way Mushrooms is grasslands' shift-to-Umbra waypoint, except the destination here is two pool biomes in sequence rather than a single secret biome.
+- `"Swim to shore"`: single outcome, replaces the rest of the adventure with a jungle step followed by a beach step (encounters rolled from each biome's pool at apply time). Capture the design intent: Rapids becomes the **biome-shift waypoint** of the river, mirroring the way Mushrooms is grasslands' shift-to-Umbra waypoint, except the destination here is two pool biomes in sequence rather than a single secret biome.
 - Remove any "TODO: second option deferred" / "see `rapids-swim-to-shore.md`" note that the parent river ticket dropped in.
 
 ### 6. Sanity-check sibling-ticket coordination

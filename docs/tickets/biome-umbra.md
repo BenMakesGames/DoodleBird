@@ -29,7 +29,6 @@
 - Adding `Umbra` to the existing 6 adventure templates in `AdventureGenerator`. Umbra is reachable **only** via `BiomeShiftOutcome` for this iteration — a "secret" / discovered biome.
 - Recursive biome-shifts (e.g. Umbra → some other biome). Authored only if a design need surfaces; not required for this ticket.
 - Per-encounter art / sprites for Umbra encounters. Like all biomes, Umbra renders sky + ground band + encounter-name text only.
-- New `OptionKind` values. Umbra encounters use existing `Engage` / `Ignore` / `Retreat`.
 - Generalising `BiomeShiftOutcome` into a stat-effect-bearing outcome (e.g. "lose hunger and shift biome"). Stat systems don't exist; YAGNI.
 - Stat / inventory / mood effects from eating the trippy mushroom beyond the biome shift itself.
 
@@ -90,7 +89,7 @@
 - [ ] `BiomeExtensions` static-ctor count-sanity check (`Info.Count == Enum.GetValues<Biome>().Length`) still passes — Umbra entry present.
 - [ ] `PetDoodle/Encounters/Outcome.cs` contains `public sealed record BiomeShiftOutcome(...) : Outcome(Text)` whose payload is sufficient to construct the sub-adventure (default: `Text`, `TargetBiome`, `StepCount` per Open Decision 2a).
 - [ ] At least 1 (up to 3) new `Encounter` enum values authored in `PetDoodle.Data/Encounter.cs` for Umbra encounters.
-- [ ] Each new Umbra encounter has an `EncounterInfo` entry in `EncounterExtensions.Info` with ≥2 options; every option has a non-empty `Outcomes` array and a designed `OptionKind`.
+- [ ] Each new Umbra encounter has an `EncounterInfo` entry in `EncounterExtensions.Info` with ≥2 options; every option has a non-empty `Outcomes` array.
 - [ ] `EncounterExtensions` static-ctor sanity check (every option's `Outcomes` non-empty) passes.
 - [ ] The `Mushrooms` encounter's "Eat one" option (or whatever the grasslands ticket named the equivalent) has a third outcome of type `BiomeShiftOutcome` whose `TargetBiome == Biome.Umbra`, with flavor text fitting the 128-px viewport at 6×8 font (≤~21 chars).
 - [ ] The cave `GlowingMushrooms` encounter gains an "Eat" option (Engage kind) whose `Outcomes` array contains a single `BiomeShiftOutcome` whose `TargetBiome == Biome.Umbra`. Result: cave Glowing Mushrooms goes from single-option (Ignore) to two-option (Eat, Ignore); Eat is a deterministic shift to Umbra.
@@ -108,7 +107,7 @@ Append `Umbra` to `PetDoodle.Data/Biome.cs`. Position at the end of the list (ex
 In `PetDoodle/Encounters/Outcome.cs`, add a new `public sealed record BiomeShiftOutcome(string Text, Biome TargetBiome, int StepCount) : Outcome(Text);` (default shape per Open Decision 2a). The record inherits `Text` from the base, mirrors the existing `SubstituteOutcome` / `EndAdventureOutcome` density. **Guard at ctor: `StepCount` must be ≥1** — throw `ArgumentOutOfRangeException` if zero or negative. Pit-of-success: a `StepCount = 0` shift would clear `RemainingSteps` to empty and immediately end the adventure (functionally equivalent to `EndAdventureOutcome` but more surprising) — authors should use `EndAdventureOutcome` for that intent.
 
 ### 3. Author Umbra encounters (design session output)
-In `PetDoodle.Data/Encounter.cs`, append the new enum values from the design session (e.g. `WhisperingSpore`, `EchoSelf`). In `PetDoodle/Encounters/EncounterExtensions.cs`, add corresponding `EncounterInfo` entries with `DisplayName` + `Options[]` (each option has `Label`, `Kind`, non-empty `Outcomes[]`). Mirror the shape of the encounters authored by the grasslands ticket — same `EncounterInfo` / `EncounterOption` shape, same `Outcome` derived types.
+In `PetDoodle.Data/Encounter.cs`, append the new enum values from the design session (e.g. `WhisperingSpore`, `EchoSelf`). In `PetDoodle/Encounters/EncounterExtensions.cs`, add corresponding `EncounterInfo` entries with `DisplayName` + `Options[]` (each option has `Label` + non-empty `Outcomes[]`). Mirror the shape of the encounters authored by the grasslands ticket — same `EncounterInfo` / `EncounterOption` shape, same `Outcome` derived types.
 
 ### 4. Add `Biome.Umbra` to `BiomeExtensions.Info`
 In `BiomeExtensions.cs`'s static-ctor dictionary literal, add a `[Biome.Umbra]` entry with display name, sky color, ground color (Open Decision 4), and `PossibleEncounters` containing the Umbra encounters from step 3. Keep the static-ctor count-sanity-check call site unchanged — it'll pass automatically once enum + dictionary are in sync.
@@ -117,12 +116,11 @@ In `BiomeExtensions.cs`'s static-ctor dictionary literal, add a `[Biome.Umbra]` 
 Locate the `Mushrooms` (or grasslands-implementer-chosen-name) entry in `EncounterExtensions.Info`. Rebuild its `EncounterInfo` record (records are immutable; replace the dictionary entry) with the same options as before, except the "Eat one" option's `Outcomes` array gains a third element: `new BiomeShiftOutcome("Trippy! To the Umbra", Biome.Umbra, /* StepCount */ 2 or 3 per Open Decision 2)`. The other Mushrooms outcomes (already authored by grasslands) stay untouched. Net effect: `Random.Shared.Next(option.Outcomes)` now has 1-in-3 chance of rolling the trippy outcome.
 
 ### 5b. Append the "Eat" option to cave `GlowingMushrooms`
-Locate the `GlowingMushrooms` entry in `EncounterExtensions.Info` (currently single-option Ignore). Rebuild its `EncounterInfo` record with the existing Ignore option plus a new Engage option:
+Locate the `GlowingMushrooms` entry in `EncounterExtensions.Info` (currently single-option). Rebuild its `EncounterInfo` record with the existing option plus a new "Eat" option:
 ```
 new EncounterOption
 {
     Label = "Eat",
-    Kind = OptionKind.Engage,
     Outcomes = [new BiomeShiftOutcome("Trippy! To the Umbra", Biome.Umbra, /* StepCount */ 2 or 3)],
 }
 ```

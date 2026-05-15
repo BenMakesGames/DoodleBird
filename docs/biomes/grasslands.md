@@ -21,11 +21,11 @@ adventures feels continuous with home.
 A fallen log lying across the grass. The bird can approach it in three
 ways, each with very different risk shapes:
 
-| Option | Kind | Outcomes |
-|---|---|---|
-| Crawl through | Engage | Flavor "Nothing inside." · Substitute → Mushrooms · Substitute → GiantToad |
-| Jump over | Ignore | Flavor "Cleared it!" · Flavor "Tripped and fell." |
-| Roll it away | Engage | Flavor "Rolled it away!" · Flavor "Too heavy." · Substitute → GiantToad |
+| Option | Outcomes |
+|---|---|
+| Crawl through | Flavor "Nothing inside." · Substitute → Mushrooms · Substitute → GiantToad |
+| Jump over | Flavor "Cleared it!" · Flavor "Tripped and fell." |
+| Roll it away | Flavor "Rolled it away!" · Flavor "Too heavy." · Substitute → GiantToad |
 
 Crawling is the highest-variance option: 1/3 chance of nothing, 1/3 of
 finding mushrooms (which itself is a benign branch), 1/3 of waking a
@@ -43,10 +43,10 @@ docs called this a "speed-bump" shape and that's intentional. Snake is
 the encounter that *teaches* the player that not every encounter has to
 be risky.
 
-| Option | Kind | Outcomes |
-|---|---|---|
-| Go around | Ignore | Flavor "Wide berth given." |
-| Intimidate | Engage | Flavor "Snake fled." |
+| Option | Outcomes |
+|---|---|
+| Go around | Flavor "Wide berth given." |
+| Intimidate | Flavor "Snake fled." |
 
 Single-outcome options mean the result is deterministic — author-intent
 "always succeeds" is preserved. A future ticket may add risk variants
@@ -58,10 +58,10 @@ hit points or status.
 A single tree in the field. Two options — one passive, one engaged with
 a branching surprise:
 
-| Option | Kind | Outcomes |
-|---|---|---|
-| Climb it | Engage | Flavor "Found bananas!" · Substitute → FightSquirrel |
-| Ignore it | Ignore | Flavor "Hopped past." |
+| Option | Outcomes |
+|---|---|
+| Climb it | Flavor "Found bananas!" · Substitute → FightSquirrel |
+| Ignore it | Flavor "Hopped past." |
 
 Climbing is a coin-flip between a freebie ("Found bananas!" — flavor
 only, no inventory yet) and a fight. Tree's design intent: a low-cost
@@ -81,10 +81,10 @@ appear when another encounter's `SubstituteOutcome` swaps them in.
 
 Reached from Hollow Log → Crawl through. Bird found a mushroom patch.
 
-| Option | Kind | Outcomes |
-|---|---|---|
-| Eat one | Engage | Flavor "Tasty!" · Flavor "Bitter. Yuck!" |
-| Hop away | Ignore | Flavor "Hopped away." |
+| Option | Outcomes |
+|---|---|
+| Eat one | Flavor "Tasty!" · Flavor "Bitter. Yuck!" |
+| Hop away | Flavor "Hopped away." |
 
 Currently safe on both branches. The "Trippy" outcome that biome-shifts
 to Umbra is **deferred** to the biome-umbra ticket — it requires a new
@@ -96,44 +96,44 @@ exist yet.
 Reached from Hollow Log → Crawl through or Roll it away. The toad is
 big enough to actually threaten the bird.
 
-| Option | Kind | Outcomes |
-|---|---|---|
-| Peck at it | Engage | Flavor "Toad hopped off." · EndAdventure "Knocked silly. Home." |
-| Flee | Retreat | EndAdventure "Flapped home!" |
+| Option | Outcomes |
+|---|---|
+| Peck at it | Flavor "Toad hopped off." · EndAdventure "Knocked silly. Home." |
+| Flee | EndAdventure "Flapped home!" |
 
 Pecking is a 50/50 between a safe-ish poke and getting bowled over (end
-adventure). Fleeing is the consistent escape — kind `Retreat` is
-expressed via a single `EndAdventureOutcome`. This makes the *data* say
-"this option ends the adventure" without relying on the outcome resolver
-to treat `OptionKind.Retreat` specially. Pit-of-success.
+adventure). Fleeing is the consistent escape — its single
+`EndAdventureOutcome` is the entire "this option ends the adventure"
+contract. Pit-of-success: one mechanism, no parallel signal.
 
 ### Fight Squirrel
 
 Reached from Lone Tree → Climb it. A squirrel in the canopy.
 
-| Option | Kind | Outcomes |
-|---|---|---|
-| Peck | Engage | Flavor "Squirrel fled." · EndAdventure "Lost the fight." |
-| Glide to surface | Ignore | Flavor "Glided down." |
+| Option | Outcomes |
+|---|---|
+| Peck | Flavor "Squirrel fled." · EndAdventure "Lost the fight." |
+| Glide to surface | Flavor "Glided down." |
 
 Mirrors GiantToad in risk shape: half safe, half catastrophic on the
-engage option. Gliding is the safe disengage — but kind is `Ignore`, not
-`Retreat`, because the adventure continues afterward (the bird just left
-the tree, not the adventure).
+peck option. Gliding is the safe disengage — its single `FlavorOutcome`
+keeps the adventure going (the bird just left the tree, not the
+adventure).
 
 ## Design rationale notes
 
 - **Single-outcome options are valid** when the design wants deterministic
   feedback. Snake's two options are both single-outcome to model "always
   succeeds." Multi-outcome options exist for variety / risk variance.
-- **Retreat kind is modelled via EndAdventureOutcome on every outcome of
-  the Retreat option.** This double-locks the contract: the kind says
-  "this option cancels the adventure," and the outcome data says the
-  same thing mechanically. The resolver (T6) can use either signal.
-- **EndAdventure shows up on Engage options too** (GiantToad Peck,
+- **"Retreat" options own a single `EndAdventureOutcome`.** That's the
+  whole mechanism — the adventure ends when an `EndAdventureOutcome`
+  rolls and applies. A retreat-labelled option is just the conventional
+  single-outcome shape for "always end here." Resolver doesn't need a
+  separate signal.
+- **EndAdventure shows up on non-retreat options too** (GiantToad Peck,
   FightSquirrel Peck) — that's how we communicate "this is a real fight
-  and you might lose." EndAdventure ≠ Retreat: a Retreat option *intends*
-  to end the adventure; an Engage option *can* end it as a bad outcome.
+  and you might lose." A retreat option *always* ends the adventure; a
+  multi-outcome option *can* end it as one bad roll among many.
 - **Substitute targets don't need their own pool entry.** Mushrooms,
   GiantToad, FightSquirrel are authored but not added to
   `Biome.Grasslands.PossibleEncounters` — they exist purely as

@@ -46,12 +46,9 @@ on.
   idle-timer trigger no-ops on null.
 - **`Adventuring.Phase` enum** (`ChoosingOption` / `ShowingOutcome`) —
   introduced in T5 (with only `ChoosingOption` used), extended in T6.
-- **T3 ships option/outcome types** (`OptionKind`, `EncounterOption`,
-  `Outcome` hierarchy, `EncounterInfo.Options`) so biome tickets can
-  author content before T5/T6 land.
-- **Retreat bypasses outcomes** — escape hatch via `OptionKind.Retreat`,
-  not a narrative outcome. Direct `EndAdventure()` call, no
-  `ShowingOutcome` phase.
+- **T3 ships option/outcome types** (`EncounterOption`, `Outcome`
+  hierarchy, `EncounterInfo.Options`) so biome tickets can author content
+  before T5/T6 land.
 - **Save fires per `CurrentAdventure` mutation only** — no per-frame
   writes. Mutation sites: adventure rolled (T4), step resolved (T4),
   encounter substituted (T6), adventure ended (T4 + T6).

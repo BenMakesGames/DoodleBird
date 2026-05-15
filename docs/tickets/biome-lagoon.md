@@ -3,7 +3,7 @@
 ## Context
 `Biome.Lagoon` exists with sky/ground colors and an **empty** `PossibleEncounters` pool. This ticket runs a design session with the user to author **1-3 encounters** for lagoon, then lands the corresponding `Encounter` enum values, `EncounterExtensions.Info` entries, and `BiomeExtensions` pool entry.
 
-Seed suggestions from `docs/adventures.md`: `mermaid`. Lagoon was also the original "no retreat" example in the design discussion — consider whether one or more lagoon encounters intentionally omit `Retreat` (player commits once they engage). Final set decided in design session.
+Seed suggestions from `docs/adventures.md`: `mermaid`. Lagoon was also the original "no retreat" example in the design discussion — consider whether one or more lagoon encounters intentionally omit an end-adventure escape option (player commits once they engage). Final set decided in design session.
 
 ## Prerequisites
 - [Biome & Encounter Info Pattern](./biome-and-encounter-info-pattern.md)
@@ -16,7 +16,6 @@ Seed suggestions from `docs/adventures.md`: `mermaid`. Lagoon was also the origi
 2. **Display name** (user-facing, space-cased).
 3. **Options** — variable count. For each option:
    - Label (short string).
-   - `OptionKind` (`Engage` / `Ignore` / `Retreat`).
    - **Outcomes** — non-empty list. For each outcome:
      - Text (short flavor string).
      - Effect kind: `FlavorOutcome`, `SubstituteOutcome`, or `EndAdventureOutcome`.
@@ -33,7 +32,7 @@ Capture the agreed design in `docs/biomes/lagoon.md`.
 
 ## Acceptance Criteria
 - [ ] 1-3 encounters authored for lagoon, each with at least 2 options.
-- [ ] Every option has a non-empty `Outcomes[]` and a designed kind.
+- [ ] Every option has a non-empty `Outcomes[]`.
 - [ ] `Biome.Lagoon.GetInfo().PossibleEncounters` contains every authored encounter.
 - [ ] `EncounterExtensions` static-ctor sanity check passes.
 - [ ] `docs/biomes/lagoon.md` describes design rationale.
@@ -41,5 +40,5 @@ Capture the agreed design in `docs/biomes/lagoon.md`.
 ## Test Plan
 - [ ] `dotnet build` passes with no warnings.
 - [ ] If T4 landed: templates 5 and 6 can roll once lagoon + their other biomes are authored.
-- [ ] If T5/T6 landed: each authored option renders; timer / click / outcome behavior verified. If any lagoon encounter is `Retreat`-less, confirm the option row contains no `Retreat` button for that encounter.
+- [ ] If T5/T6 landed: each authored option renders; timer / click / outcome behavior verified. If any lagoon encounter has no end-adventure escape option (i.e. no option whose only outcome is `EndAdventureOutcome`), confirm the option row contains no escape-labelled button for that encounter.
 - [ ] Outcome text fits 128 px width with 6×8 font.

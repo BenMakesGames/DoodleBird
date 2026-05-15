@@ -74,21 +74,17 @@ for that biome.
   encounters (e.g. an Infinity Imp that drags the bird into an astral maze,
   a fae feast with many forking responses) without being boxed into a fixed
   option count.
-- Each option has a **kind**: `Engage`, `Ignore`, or `Retreat`. Kinds are
-  extensible; new ones get added when a future encounter demands different
-  semantics.
 - The bird has a randomly-selected **default option** highlighted when the
   encounter begins, with a fixed **5-second timer** counting down. The
   remaining time is drawn on screen to **0.1s** precision. If the timer
   expires before the player picks something else, the default fires.
-- A `Retreat` option, when present, cancels the entire adventure and
-  returns the bird home immediately. Retreat is *common*, not guaranteed —
-  some encounters may not offer it (e.g. once-you're-in-the-maze scenarios).
-  **Authoring convention**: every outcome on a `Retreat` option should be
-  an `EndAdventureOutcome`. The outcome data then mechanically matches the
-  kind's intent — the resolver can dispatch on either signal. Single-outcome
-  options are valid when the design wants deterministic "always succeeds"
-  feedback (e.g. an Ignore option that just hops the bird past).
+- An option whose only outcome is an `EndAdventureOutcome` cancels the
+  adventure when fired (after the standard outcome-reveal delay). Such
+  options are commonly labelled `"Retreat"` or `"Flee"`. Retreat-style
+  options are *common*, not guaranteed — some encounters may not offer
+  one (e.g. once-you're-in-the-maze scenarios). Single-outcome options
+  are valid when the design wants deterministic "always succeeds"
+  feedback (e.g. a hop-past option whose only outcome is flavor text).
 
 ### Outcomes
 
@@ -112,10 +108,11 @@ Outcomes are sealed-record-hierarchy in the codebase:
   targets are "secondary" encounters — authored but excluded from
   `PossibleEncounters` so they're only reachable via chain.
 - **`EndAdventureOutcome(Text)`** — show the text, then end the adventure
-  immediately (clear `CurrentAdventure`, save, return to `Playing`).
-  Same final effect as a `Retreat` option, but driven by an option's
-  outcome rather than the option's kind. (Useful for narrative "you wake up
-  back at home" or "the maze swallows you and spits you out" effects.)
+  immediately (clear `CurrentAdventure`, save, return to `Playing`). The
+  **sole** end-adventure mechanism: a "Retreat" option ends the adventure
+  by owning a single `EndAdventureOutcome`; narrative "you wake up back
+  at home" / "the maze spits you out" effects use the same outcome record
+  in a multi-outcome option.
 
 Bird-stat / inventory effects (hunger, skills, tiredness, items) are out of
 scope while those systems don't exist yet. New outcome kinds get added as
@@ -188,8 +185,8 @@ One ticket per biome:
 Each biome ticket is a **design + implementation** unit:
 
 1. **Design** (collaborative session with the user): finalise 1–3 encounters
-   for the biome — each encounter's display name, its option list (label +
-   kind), and each option's outcome list (text + effect kind).
+   for the biome — each encounter's display name, its option list (label),
+   and each option's outcome list (text + effect kind).
 2. **Author** (code drops):
    - Add new `Encounter` enum values in `PetDoodle.Data` for any encounters
      introduced.
@@ -212,10 +209,9 @@ resolver needs the full effect taxonomy authored.
 
 ## Conventions
 
-- Biomes, encounters, and option kinds are modelled as `enum` values.
-  Biomes and encounters are backed by sealed `*Info` records, looked up via
-  an extension method (`enum.GetInfo()`) backed by a `FrozenDictionary`.
-  Established pattern from prior games.
+- Biomes and encounters are modelled as `enum` values, backed by sealed
+  `*Info` records, looked up via an extension method (`enum.GetInfo()`)
+  backed by a `FrozenDictionary`. Established pattern from prior games.
 - Outcomes are modelled as a **sealed-record hierarchy** with an abstract
   base record (`Outcome(string Text)`) and one sealed derived record per
   effect kind. Switch expressions over the hierarchy give compiler-flagged

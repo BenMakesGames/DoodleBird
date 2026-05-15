@@ -22,9 +22,9 @@ palette match for cave floor / rock.
 A cluster of bioluminescent mushrooms. Currently a **single-option
 encounter** — see deferral note below.
 
-| Option | Kind | Outcomes |
-|---|---|---|
-| Ignore | Ignore | Flavor "Hopped past." |
+| Option | Outcomes |
+|---|---|
+| Ignore | Flavor "Hopped past." |
 
 > **Deferred**: an "Eat" option that **always** ships the bird into the
 > Umbra biome — Glowing Mushrooms are intrinsically trippy, unlike
@@ -43,11 +43,11 @@ encounter** — see deferral note below.
 A bat clinging to the ceiling. Three options across the engage / ignore /
 retreat spread — the highest-option encounter in cave today.
 
-| Option | Kind | Outcomes |
-|---|---|---|
-| Intimidate | Engage | Flavor "Bat flew off." · EndAdventure "Rebuffed. Home." |
-| Sneak around | Ignore | Flavor "Slipped past." · Flavor "Spotted! Ran past." · EndAdventure "Caught! Home." |
-| Retreat | Retreat | EndAdventure "Flapped home!" |
+| Option | Outcomes |
+|---|---|
+| Intimidate | Flavor "Bat flew off." · EndAdventure "Rebuffed. Home." |
+| Sneak around | Flavor "Slipped past." · Flavor "Spotted! Ran past." · EndAdventure "Caught! Home." |
+| Retreat | EndAdventure "Flapped home!" |
 
 Intimidate mirrors grasslands `GiantToad` / beach `AggressiveSeagull`
 risk shape — 50/50 between flavor success and end-adventure. Sneak around
@@ -57,19 +57,19 @@ escape with the canonical `"Flapped home!"` text reused from GiantToad
 and AggressiveSeagull — three biomes now share that exact retreat line,
 which deliberately reinforces "Retreat always works the same way."
 
-Sneak's `Ignore` kind (not `Engage`) is intentional: the bird is *passing
-through quietly*, not picking a fight. The kind matches narrative intent
-even though one of the three outcomes is end-adventure. `Engage` would
-have implied the bird sought conflict, which sneak doesn't.
+Sneak's intent is *passing through quietly*, not picking a fight — even
+though one of the three outcomes is end-adventure. The label communicates
+the intent (the bird sneaks rather than seeks conflict); the outcome mix
+encodes that stealth can fail.
 
 ### Large Boulder
 
 A boulder blocking the path. Two options, both safe — pure flavor speed-bump.
 
-| Option | Kind | Outcomes |
-|---|---|---|
-| Move | Engage | Flavor "Too heavy." · Flavor "Shoved it past!" |
-| Ignore | Ignore | Flavor "Hopped past." |
+| Option | Outcomes |
+|---|---|
+| Move | Flavor "Too heavy." · Flavor "Shoved it past!" |
+| Ignore | Flavor "Hopped past." |
 
 Modelled on grasslands `Snake` / river `MusclyTrout` speed-bump shape —
 no end-adventure risk. Move is a coin-flip between fail and success
@@ -100,18 +100,17 @@ fills that slot.
   follow-up ticket (biome-umbra) appends the second option. The single
   option still has a non-empty `Outcomes[]`, so the data-model invariant
   holds.
-- **Giant Bat's `Sneak around` is the first three-outcome `Ignore`
-  option in the codebase.** Most Ignore options in other biomes are
+- **Giant Bat's `Sneak around` is the first three-outcome "don't engage"
+  option in the codebase.** Most don't-engage options in other biomes are
   single-outcome safe passes. Sneak's variance is intentional —
   bypassing a Giant Bat isn't free; it's quieter than fighting it but
   not guaranteed. The end-adventure outcome on a sneak roll communicates
-  "stealth can fail." This is a deliberate design carve-out: `Ignore`
-  semantically means "don't engage", not "always safe."
-- **Retreat option uses `EndAdventureOutcome` per convention.** Same as
-  grasslands GiantToad and beach AggressiveSeagull — every outcome on a
-  Retreat option is an `EndAdventureOutcome`. Both the kind and the
-  outcome data say "this option ends the adventure." Resolver can use
-  either signal.
+  "stealth can fail." Don't-engage labels mean "don't pick a fight," not
+  "always safe."
+- **Retreat option owns a single `EndAdventureOutcome` per convention.**
+  Same as grasslands GiantToad and beach AggressiveSeagull — the option's
+  only outcome is `EndAdventureOutcome("Flapped home!")`. That's the
+  whole "end the adventure" mechanism.
 - **Text length budget.** All `DisplayName` / outcome `Text` strings
   sized for 128 px / 6×8 font (~17–21 chars around the bird). Tightest
   string today: "Glowing Mushrooms" display name at 17 chars; "Spotted!

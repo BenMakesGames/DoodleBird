@@ -2,7 +2,7 @@
 
 ## Context
 **Current behavior**: `Adventuring` renders the current step's biome, bird, and encounter name. A single placeholder `"Continue"` link advances steps. No real per-encounter options, no timer, no random default selection.
-**New behavior**: `Adventuring` builds a `ButtonList` from the current encounter's `Options`. One option is randomly pre-selected as the bird's default (visually highlighted as `Active`). A **5-second timer** counts down on screen with **0.1-second precision**; when it expires, the default option fires automatically. If the player clicks any option (default or not) the timer stops and that option fires. Firing an option resolves the step (this ticket: same behavior as today — `Engage` / `Ignore` advance, `Retreat` ends adventure). **Outcome resolution is deferred to T6** — this ticket wires the option UI and behavior but options' `Outcomes` arrays are not yet read.
+**New behavior**: `Adventuring` builds a `ButtonList` from the current encounter's `Options`. One option is randomly pre-selected as the bird's default (visually highlighted as `Active`). A **5-second timer** counts down on screen with **0.1-second precision**; when it expires, the default option fires automatically. If the player clicks any option (default or not) the timer stops and that option fires. Firing an option hands it to the resolver — see `outcome-resolution.md`. This ticket wires the option UI, the timer, and the seam to the resolver; the resolver's roll-show-apply pipeline lands in T6.
 
 ## Prerequisites
 - [Adventure Generation & State Transition](./adventure-generation-and-state-transition.md)
@@ -14,10 +14,9 @@
 - `ButtonList`: allow callers to set the initial `Active` button (currently `private set`, defaults to `Buttons[0]`). New ctor overload accepting `IButton initialActive`.
 - `Adventuring`: build a `ButtonList` from the current encounter's options on step enter, pre-set `Active` to a random option, start a 5-second timer, draw remaining time top-right, on timer expiry invoke the active button's `Action`. Replace the placeholder `"Continue"` link.
 - `Adventuring`: timer resets when the step changes (new encounter → new 5s window, new random default).
-- Option dispatch in this ticket: `Engage` / `Ignore` → resolve current step (same as today's `"Continue"`); `Retreat` → end adventure entirely.
+- Option dispatch in this ticket: each button's `Action` is `() => FireOption(option)` — a uniform seam to the resolver (`outcome-resolution.md`). Today's placeholder `FireOption` simply resolves the current step; T6 replaces it with the full outcome pipeline.
 
 ### Out of scope
-- **Outcomes**: every option's `Action` for now is "resolve step" or "end adventure" by `Kind`. Reading `Outcomes` arrays + applying their effects is **T6**.
 - Per-encounter art / unique animations for options.
 - Sound effects.
 - Per-encounter timer durations — fixed 5s across all encounters.
@@ -31,7 +30,7 @@
   - `ButtonList` (`PetDoodle/UI/ButtonList.cs`) — extend to allow caller-set initial `Active`. Current `Active` setter is private; current ctor always uses `buttons[0]`.
   - `LinkLabel` (`PetDoodle/UI/LinkLabel.cs`) — model for any new `IButton` impl.
   - `IButton` (`PetDoodle/UI/IButton.cs`) — the contract.
-  - `EncounterInfo` / `EncounterOption` / `OptionKind` (T3) — authored options consumed here.
+  - `EncounterInfo` / `EncounterOption` (T3) — authored options consumed here.
   - `BenMakesGames.RandomHelpers` — `Random.Shared.Next(IList<T>)` for default-option pick.
 
 ## Constraints & Gotchas
@@ -40,8 +39,8 @@
 - **Timer ticks in `FixedUpdate`** (60 Hz, deterministic). Decrement a `float RemainingSeconds` and clamp at 0. Frame rate dips shouldn't extend the timer.
 - **Timer fires exactly once per step**. Track a `bool TimerFired` (or the phase enum if introduced here) so a `<=0` accumulator doesn't repeatedly invoke the action.
 - **Display precision**. Format as `$"{remaining:0.0}"` (one decimal). Don't display negative values once expired.
-- **Retreat semantics**. An option whose `Kind == OptionKind.Retreat` clears `CurrentAdventure` entirely (`EndAdventure`), not just pops the front step.
-- **`WarningsAsErrors=Nullable`** — `EncounterOption.Action` is dispatched via `Kind`; the `IButton.Action` delegate itself is non-null (initialised at button construction).
+- **EndAdventureOutcome semantics**. An option whose rolled outcome is `EndAdventureOutcome` ends the adventure when applied (after the outcome-reveal delay). The resolver — not the option — owns end-adventure dispatch. No per-option short-circuit.
+- **`WarningsAsErrors=Nullable`** — the `IButton.Action` delegate is non-null (initialised at button construction).
 - **Empty `Options` arrays are impossible** per the T3 ctor guard + static-ctor sanity check, but `Adventuring` should still fail loudly (assertion) if it somehow encounters one. Defence in depth.
 
 ## Open Decisions
@@ -55,7 +54,7 @@
 ## Acceptance Criteria
 - [ ] `ButtonList` supports caller-supplied initial `Active` via a new ctor overload `ButtonList(GameStateManager gsm, MouseManager cursor, IList<IButton> buttons, IButton initialActive)`. Throws `ArgumentException` if `initialActive` not in `buttons`. Existing ctor unchanged.
 - [ ] `PetDoodle/UI` contains `OptionButton` (or equivalent) implementing `IButton`. Renders a label centered in its rect with the active/inactive color contrast.
-- [ ] `Adventuring` no longer constructs the placeholder `"Continue"` link. Instead, on step enter, it builds a `ButtonList` of `OptionButton`s — one per `EncounterOption` in the current encounter — with actions dispatched by `Kind`: `Engage` / `Ignore` → resolve current step; `Retreat` → end adventure.
+- [ ] `Adventuring` no longer constructs the placeholder `"Continue"` link. Instead, on step enter, it builds a `ButtonList` of `OptionButton`s — one per `EncounterOption` in the current encounter — with each button's `Action` set to `() => FireOption(option)` (see `outcome-resolution.md` for the resolver).
 - [ ] A random option from the current step's `Options` is pre-selected as the bird's default, set via the new `ButtonList` ctor overload. The active option visibly stands out from the others.
 - [ ] A 5-second timer counts down in `Adventuring.FixedUpdate`. When the timer reaches 0, the `Active` button's `Action` fires exactly once.
 - [ ] Remaining time is drawn top-right formatted to one decimal (`$"{remaining:0.0}"` or `…s"`).
@@ -82,10 +81,7 @@ On `Adventuring`: `private enum Phase { ChoosingOption /*, ShowingOutcome added 
 On `Adventuring`, private method `EnterCurrentStep()`:
 - Read current encounter's `Options`.
 - Build one `OptionButton` per option, laid out across the bottom row (equal width slots, small margin).
-- Each button's `Action` dispatches on `option.Kind`:
-  - `OptionKind.Engage` → `() => ResolveCurrentStep();`
-  - `OptionKind.Ignore` → `() => ResolveCurrentStep();`
-  - `OptionKind.Retreat` → `() => EndAdventure();`
+- Each button's `Action` is `() => FireOption(option)` — the uniform seam to the resolver (`outcome-resolution.md`). In this ticket, `FireOption` is a placeholder that calls `ResolveCurrentStep()`; T6 replaces its body with the roll-show-apply pipeline.
 - Pick a random `EncounterOption` via `Random.Shared.Next(options)`; the matching `OptionButton` is the `initialActive` argument.
 - Construct `ButtonList` with the new ctor overload.
 - Reset `RemainingSeconds = 5f`. Set `CurrentPhase = Phase.ChoosingOption` (no-op today; explicit for T6).
@@ -119,7 +115,7 @@ In `Adventuring.Draw`, after option buttons, before `Mouse.Draw`:
 - [ ] Watch the timer count down at one-decimal precision. At `0.0`, the highlighted option's action fires — step resolves (visible: biome and encounter change) or adventure ends (visible: return to `Playing`).
 - [ ] Click a non-default option mid-countdown. That option's action fires immediately; timer stops.
 - [ ] Run several adventures. Random default option visibly varies between encounters of the same type — eyeball at least 2 distinct defaults across 5–10 rolls of a multi-option encounter.
-- [ ] Encounter an option-list with no retreat (per `Mermaid` or whichever biome ticket authored it). Confirm there's no `Retreat` button; timer still fires the default at 0.0.
-- [ ] Click `Retreat` on a multi-step adventure mid-flight. Confirm immediate return to `Playing`. `save.json` shows `CurrentAdventure: null`. Remaining steps discarded.
+- [ ] Encounter an option-list with no retreat-labelled option (per `Mermaid` or whichever biome ticket authored it). Confirm there's no `Retreat` button; timer still fires the default at 0.0.
+- [ ] Click any option on a multi-step adventure mid-flight. Confirm the placeholder `FireOption` resolves the current step (next step's encounter shows). Full retreat-via-EndAdventureOutcome behavior lands with T6.
 - [ ] Quit during a countdown. Relaunch — same encounter restored (`save.json` step list unchanged); timer resets to `5.0` (transient, not persisted); fresh random default picked.
 - [ ] Instrument `SaveService.Save` to log — confirm one log line per step resolve, retreat, and adventure end. No per-frame logging.

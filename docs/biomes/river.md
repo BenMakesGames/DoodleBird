@@ -21,13 +21,13 @@ pair — a future biome ticket may differentiate.
 
 A burly trout in the shallows. Two options, both safe:
 
-| Option | Kind | Outcomes |
-|---|---|---|
-| Eat | Engage | Flavor "Tasty fish!" · Flavor "Too strong to grab." |
-| Ignore | Ignore | Flavor "Swam past." |
+| Option | Outcomes |
+|---|---|
+| Eat | Flavor "Tasty fish!" · Flavor "Too strong to grab." |
+| Ignore | Flavor "Swam past." |
 
 Modelled on the grasslands `Snake` shape — a "speed-bump" encounter.
-Engage is a coin-flip flavor (food vs. fail); Ignore is the deterministic
+Eat is a coin-flip flavor (food vs. fail); Ignore is the deterministic
 safe pass. No end-adventure risk on either branch — the trout is annoying,
 not dangerous. Like Snake, this teaches the player that not every
 encounter has to be perilous.
@@ -37,15 +37,14 @@ encounter has to be perilous.
 Fast water. Currently a **single-option encounter** — see deferral note
 below.
 
-| Option | Kind | Outcomes |
-|---|---|---|
-| Avoid rocks | Engage | Flavor "Avoided them." · EndAdventure "Hit a rock. Limped home." |
+| Option | Outcomes |
+|---|---|
+| Avoid rocks | Flavor "Avoided them." · EndAdventure "Hit a rock. Limped home." |
 
 A 50/50 risk on the one option: either thread the rocks cleanly, or get
 slammed and end the adventure early. Mirrors the `GiantToad` / `FightSquirrel`
 risk shape (one flavor, one end-adventure) — pure "real fight, you might
-lose" framing on an Engage kind, even though the "opponent" here is the
-river itself.
+lose" framing, even though the "opponent" here is the river itself.
 
 > **Deferred**: a second option "Swim to shore" — a single outcome that
 > replaces the rest of the adventure with a `[Jungle, Beach]` sub-adventure.
@@ -70,12 +69,12 @@ river itself.
   ships flat — every authored encounter is in the pool, every option is
   a terminal flavor / end-adventure. Less branching, smaller surface.
   Substitute chains can be added later if a design need surfaces.
-- **No `Retreat` option on either encounter.** Both river encounters are
-  Engage+Ignore. The grasslands `Snake` / `LoneTree` also lack `Retreat`;
-  authoring convention is `Retreat` is *common*, not guaranteed. Rapids
-  felt a poor fit for Retreat — "fleeing rapids" overlaps semantically
-  with "Swim to shore" (the deferred option), so leaving Retreat off
-  today keeps the design coherent when the second option lands.
+- **No retreat-style option on either encounter.** Neither river encounter
+  ships an end-adventure escape; grasslands `Snake` / `LoneTree` also
+  lack one. Authoring convention is retreat options are *common*, not
+  guaranteed. Rapids felt a poor fit — "fleeing rapids" overlaps
+  semantically with "Swim to shore" (the deferred option), so leaving an
+  escape off today keeps the design coherent when the second option lands.
 - **Single-option Rapids is a knowing AC violation.** River ticket's
   Acceptance Criteria say "1-3 encounters, each with at least 2 options."
   Rapids ships with one option because the intended second option needs

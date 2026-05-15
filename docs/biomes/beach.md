@@ -23,11 +23,11 @@ A small sandcastle on the beach. Three options across the engage /
 ignore spectrum. Investigate is the **trap-style** option — coin-flip
 between flavor nothing and waking a crab.
 
-| Option | Kind | Outcomes |
-|---|---|---|
-| Investigate | Engage | Flavor "Empty inside." · Substitute → StartledCrab |
-| Destroy | Engage | Flavor "Stomped flat." · Flavor "Crab fled to sea." |
-| Ignore | Ignore | Flavor "Hopped past." |
+| Option | Outcomes |
+|---|---|
+| Investigate | Flavor "Empty inside." · Substitute → StartledCrab |
+| Destroy | Flavor "Stomped flat." · Flavor "Crab fled to sea." |
+| Ignore | Flavor "Hopped past." |
 
 Modelled on grasslands `HollowLog` shape — Investigate's substitute
 chain into StartledCrab mirrors HollowLog → GiantToad. Destroy is the safe
@@ -39,10 +39,10 @@ no-op pass.
 
 A pile of purple seaweed on the sand. Two options, both safe.
 
-| Option | Kind | Outcomes |
-|---|---|---|
-| Eat | Engage | Flavor "Tasty!" · Flavor "Bitter. Yuck!" |
-| Ignore | Ignore | Flavor "Hopped past." |
+| Option | Outcomes |
+|---|---|
+| Eat | Flavor "Tasty!" · Flavor "Bitter. Yuck!" |
+| Ignore | Flavor "Hopped past." |
 
 Designed (per user spec) as a clone of grasslands `Mushrooms` outcomes:
 Eat is a coin-flip between "Tasty!" and "Bitter. Yuck!", Ignore is the
@@ -55,15 +55,16 @@ chain into it (yet).
 A territorial seagull. Two options, one high-risk engage and one
 guaranteed retreat.
 
-| Option | Kind | Outcomes |
-|---|---|---|
-| Intimidate | Engage | Flavor "Seagull flew off." · EndAdventure "Tackled! Home." |
-| Retreat | Retreat | EndAdventure "Flapped home!" |
+| Option | Outcomes |
+|---|---|
+| Intimidate | Flavor "Seagull flew off." · EndAdventure "Tackled! Home." |
+| Retreat | EndAdventure "Flapped home!" |
 
-Mirrors grasslands `GiantToad` risk shape: Engage is a 50/50 between
-flavor success and end-adventure, Retreat is the consistent escape.
-Retreat option is named `Retreat` (matching the kind) rather than
-`Flee` (GiantToad's label) — the user spec used the bare word.
+Mirrors grasslands `GiantToad` risk shape: Intimidate is a 50/50 between
+flavor success and end-adventure, Retreat is the consistent escape (its
+single `EndAdventureOutcome`). Retreat option is labelled `Retreat`
+rather than `Flee` (GiantToad's label) — the user spec used the bare
+word; both labels are valid convention.
 
 ## Substitute-only encounters
 
@@ -76,16 +77,16 @@ Reached from Sandcastle → Investigate. Risk-on-Engage, safe-on-Ignore
 shape — closer to `FightSquirrel`'s Peck / Glide-to-surface than
 `GiantToad`'s Peck / Flee.
 
-| Option | Kind | Outcomes |
-|---|---|---|
-| Peck | Engage | Flavor "Crab scuttled off." · EndAdventure "Pinched. Home." |
-| Ignore | Ignore | Flavor "Hopped past." |
+| Option | Outcomes |
+|---|---|
+| Peck | Flavor "Crab scuttled off." · EndAdventure "Pinched. Home." |
+| Ignore | Flavor "Hopped past." |
 
 Pecking is a 50/50 between safe scare-off and getting pinched into a
-forced return home. Ignore is the safe disengage — kind is `Ignore`
-(not `Retreat`) because the adventure *continues* afterward. The bird
-walked away from a startled crab, not abandoned the whole adventure.
-This is intentional design parity with `FightSquirrel.Glide to surface`.
+forced return home. Ignore is the safe disengage — its single
+`FlavorOutcome` keeps the adventure going. The bird walked away from a
+startled crab, not abandoned the whole adventure. This is intentional
+design parity with `FightSquirrel.Glide to surface`.
 
 ## Design rationale notes
 
@@ -103,10 +104,9 @@ This is intentional design parity with `FightSquirrel.Glide to surface`.
   PurpleSeaweed off Sandcastle (parallel to Mushrooms off HollowLog) is
   deferred — for now PurpleSeaweed sits in the pool directly.
 - **AggressiveSeagull uses the `Retreat` label rather than `Flee`.** The
-  spec named the option "Retreat" so the label matches the kind. Both
-  labels are valid by authoring convention — GiantToad's "Flee" is
-  fictionally evocative; "Retreat" is mechanically literal. Future
-  consistency pass can pick one.
+  spec named the option "Retreat"; both labels are valid by authoring
+  convention — GiantToad's "Flee" is fictionally evocative; "Retreat"
+  is mechanically literal. Future consistency pass can pick one.
 - **StartledCrab substitute target is authored even though only Sandcastle
   reaches it.** Per `docs/adventures.md`, substitute targets must have
   a fully-authored `EncounterInfo` entry or `GetInfo()` throws at

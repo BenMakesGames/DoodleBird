@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="DoodleBird.Data/DoodleBird.Data.csproj" />
+  <Project Path="DoodleBird.Tests/DoodleBird.Tests.csproj" />
+  <Project Path="DoodleBird/DoodleBird.csproj" />
+</Solution>
