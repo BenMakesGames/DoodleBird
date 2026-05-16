@@ -87,7 +87,7 @@ public sealed class Adventuring: GameState<AdventuringConfig>
         var groundY = Graphics.Height - 6;
         var birdCenterX = BirdLeftX + birdSheet.SpriteWidth / 2;
         var birdCenterY = groundY - birdSheet.SpriteHeight / 2;
-        BirdSprite.Draw(Graphics, birdCenterX, birdCenterY, facingRight: true, frame: 0);
+        BirdSprite.Draw(Graphics, birdCenterX, birdCenterY, facingRight: true, frame: (int)biomeInfo.BirdFrame);
 
         var font = Graphics.Fonts["Font"];
         var textX = BirdLeftX + birdSheet.SpriteWidth + EncounterTextGap;
@@ -168,8 +168,30 @@ public sealed class Adventuring: GameState<AdventuringConfig>
                 SaveService.Save(GameData);
                 GSM.ChangeState<Playing, PlayingConfig>(new(GameData));
                 break;
+            case ReplaceStepsOutcome r:
+                ReplaceRemainingSteps(adventure, r.Biomes);
+                break;
             default:
                 throw new UnreachableException($"Unhandled Outcome subtype: {outcome.GetType().Name}");
         }
+    }
+
+    private void ReplaceRemainingSteps(Adventure adventure, IReadOnlyList<Biome> biomes)
+    {
+        var newSteps = new List<AdventureStep>(biomes.Count);
+        foreach (var biome in biomes)
+        {
+            var pool = biome.GetInfo().PossibleEncounters;
+            if (pool.Length == 0)
+                throw new InvalidOperationException(
+                    $"Cannot replace remaining steps with biome '{biome}': PossibleEncounters is empty."
+                );
+            newSteps.Add(new AdventureStep(biome, Random.Shared.Next(pool)));
+        }
+
+        adventure.RemainingSteps.Clear();
+        adventure.RemainingSteps.AddRange(newSteps);
+        SaveService.Save(GameData);
+        GSM.ChangeState<Adventuring, AdventuringConfig>(new(GameData));
     }
 }

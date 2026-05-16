@@ -151,6 +151,14 @@ public static class EncounterExtensions
                         new EndAdventureOutcome("Hit a rock. Limped home."),
                     ],
                 },
+                new EncounterOption
+                {
+                    Label = "Swim to shore",
+                    Outcomes =
+                    [
+                        new ReplaceStepsOutcome("Washed ashore.", [Biome.Jungle, Biome.Beach]),
+                    ],
+                },
             ]),
 
             [Encounter.Sandcastle] = new("Sandcastle", [

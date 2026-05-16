@@ -143,3 +143,28 @@ If `biome-umbra` is already merged at this ticket's implementation time, confirm
 - [ ] (Defensive) Temporarily empty `Biome.Jungle`'s `PossibleEncounters` (comment out its pool entries) and trigger `"Swim to shore"`. Confirm the loud `InvalidOperationException` fires rather than a silent crash or empty-step bird-stares-at-nothing softlock. Revert the test edit.
 - [ ] Spot-check outcome text fits in the 128 px viewport at 6×8 font on the actual `ShowingOutcome` draw.
 - [ ] Verify `Adventuring.ApplyOutcome`'s `default: throw UnreachableException()` arm still fires when a fake unhandled subclass is dropped in (defensive — same spot-check as `outcome-resolution.md`'s test plan; ensures the new arm didn't accidentally fall through).
+
+## Learnings
+
+### Architectural decisions
+
+- **Open Decision 1 → (A) sub-default.** Landed `ReplaceStepsOutcome(string Text, IReadOnlyList<Biome> Biomes)` as a sibling sealed record alongside the existing `FlavorOutcome` / `SubstituteOutcome` / `EndAdventureOutcome` in `DoodleBird/Encounters/Outcome.cs`. `biome-umbra` hadn't landed yet at implementation time, so option (B) "extend `BiomeShiftOutcome`" was moot — there was no `BiomeShiftOutcome` to extend. Path (A) sub-default also keeps payload semantics crystal clear: a `IReadOnlyList<Biome>` says "one step per biome, encounter rolled at apply", with no `Encounter?` sentinel sneaking in. If/when `biome-umbra` ships its single-target `BiomeShiftOutcome`, the two records sit side-by-side and the rename/unify question can be revisited then.
+- **Constructor guard via custom ctor body.** The non-empty `Biomes` invariant has to throw at construction time (silent equivalent to `EndAdventureOutcome` is a footgun). Couldn't put the guard in a primary-ctor record because the parameter check needs an explicit body, so the record uses an explicit ctor + readonly property — same shape as the rest of the Outcome hierarchy externally, just with a guard inside. `ArgumentException` rather than `ArgumentOutOfRangeException` to match the "violates a structural rule, not a numeric range" framing of an empty list.
+- **Resolver helper takes `Adventure adventure` parameter explicitly.** Could have re-derived it inside `ReplaceRemainingSteps` via `GameData.CurrentAdventure ?? throw`, but `ApplyOutcome` had already null-checked + bound it locally, and threading the bound reference through is both cheaper and easier to read. Pit-of-success: helper signature signals "you must already have a live adventure."
+- **`ChangeState<Adventuring>` rather than calling `EnterCurrentStep` directly.** The existing `FlavorOutcome` / `SubstituteOutcome` arms do `ChangeState<Adventuring, AdventuringConfig>(new(GameData))` to refresh; the new arm mirrors that. The Adventuring ctor itself calls `EnterCurrentStep`, so the acceptance criterion is satisfied transitively — same code path the other outcomes take, no parallel "stay in this state, just rebuild buttons" code path needed.
+
+### Interesting tidbits
+
+- **`Adventure.RemainingSteps` is a mutable `List<AdventureStep>`** — `Clear()` + `AddRange()` preserves the existing list reference, which avoids any consumer holding a stale reference. Mirrors the in-place mutation that `SubstituteOutcome`'s arm does with `RemainingSteps[0] = …`.
+- **`BenMakesGames.RandomHelpers` `rng.Next(IList<T>)` extension** is the established uniform-pick idiom across the codebase (used in `AdventureGenerator.TryRoll`). New code in this ticket uses it too rather than calling `Random.Shared.Next(arr.Length)` + indexing.
+
+### Related areas affected
+
+- **`docs/biomes/river.md`** — Rapids subsection rewritten; deferral note dropped; "single-option Rapids is a knowing AC violation" design-rationale bullet removed; "No retreat option" bullet rewritten to reflect that Swim-to-shore now occupies the bail-out slot via biome-shift rather than end-adventure.
+
+### Rejected alternatives
+
+- **Path (B) — `biome-umbra` adopts shape (b) for everything.** Not viable at implementation time — `biome-umbra` hadn't landed. Even if it had, the "Mushroom shift uniformly rolls across Umbra's pool" idiom would have needed an `Encounter?` sentinel to express apply-time rolling, which is more design ergonomics for one extra consumer than path (A) costs.
+- **Path (C) — `BiomeShiftOutcome` with `IReadOnlyList<BiomeStepSpec>`.** Same blocker (no `BiomeShiftOutcome` yet) plus mild over-engineering risk — speculative DSL for one current consumer.
+- **Authoring the two new steps' encounters at outcome construction.** Considered baking specific encounters into the `Outcome` record (e.g. `ReplaceStepsOutcome(Text, AdventureStep[] Steps)`). Rejected for the anti-save-scum reason captured in Constraints — apply-time rolls keep the new sub-adventure uniformly subject to the same "roll committed when persisted" invariant as adventure rolls at start-of-adventure.
+- **Returning a retreat-style escape on Rapids.** Considered briefly because "Swim to shore" reads vaguely like a retreat. Kept the escape off — the swim is mechanically a biome-shift, not an adventure-end, and that distinction is the design point of the second option (it's the *biome-shift waypoint* of the river, not a second escape hatch).

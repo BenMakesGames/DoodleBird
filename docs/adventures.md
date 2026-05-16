@@ -113,6 +113,22 @@ Outcomes are sealed-record-hierarchy in the codebase:
   by owning a single `EndAdventureOutcome`; narrative "you wake up back
   at home" / "the maze spits you out" effects use the same outcome record
   in a multi-outcome option.
+- **`ReplaceStepsOutcome(Text, IReadOnlyList<Biome> Biomes)`** — show the
+  text, then **clear** `CurrentAdventure.RemainingSteps` and replace them
+  with one fresh `AdventureStep` per biome in `Biomes`. Each new step's
+  `Encounter` is rolled uniformly from that biome's `PossibleEncounters`
+  at **apply** time (preserving the anti-save-scum invariant — the new
+  sub-adventure isn't persisted until the player has committed). The
+  post-current-step tail of the original adventure is **gone**; this is
+  the key behavioral difference from `SubstituteOutcome`, which only swaps
+  the current step's encounter. **Constraints**: `Biomes` must be
+  non-empty (enforced in the ctor — empty list throws
+  `ArgumentException`); every biome's `PossibleEncounters` must be
+  non-empty at apply time, or the resolver throws
+  `InvalidOperationException` rather than silently softlocking. Used for
+  "biome-shift waypoint" options where one in-encounter choice swaps the
+  rest of the adventure for a hand-authored cross-biome detour (e.g.
+  Rapids' "Swim to shore" → `[Jungle, Beach]`).
 
 Bird-stat / inventory effects (hunger, skills, tiredness, items) are out of
 scope while those systems don't exist yet. New outcome kinds get added as
@@ -127,8 +143,11 @@ those systems land.
   Background pictures, ground textures, and decorations (grass tufts, etc.)
   are out of scope for the first iteration.
 - The bird is **frozen** (no hop animation) during encounters and is drawn
-  at a fixed left-of-centre position, using sprite frame 0 (standing).
-  Frame 1 (roosting) is reserved for future idle/sleep states.
+  at a fixed left-of-centre position. The pose is biome-driven via
+  `BiomeInfo.BirdFrame` — water biomes (River, Waterfall, Lagoon) render
+  the sitting pose (frame 1, bird floating in / sitting on the water);
+  other biomes render the standing pose (frame 0). Frame 1 doubles as the
+  available idle/sleep frame for future home-state use.
 - Bird **screen position is not part of `Bird` data** — it is purely
   visual, owned by the rendering layer in whichever game state is active.
   `Bird` carries only bird-intrinsic data (name today; hunger, skills,

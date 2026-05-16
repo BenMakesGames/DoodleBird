@@ -6,13 +6,14 @@ sightseeing. Three encounters live in the pool; three more (Mushrooms,
 GiantToad, FightSquirrel) are reachable only via `SubstituteOutcome` from
 those pool encounters.
 
-## Colors
+## Colors & Presentation
 
 - Sky: `DawnBringers16.LightBlue`
 - Ground: `DawnBringers16.DarkGreen`
+- Bird pose: `Standing` (frame 0) — feet on solid ground.
 
-These match the original `Playing` state so the transition into Grasslands
-adventures feels continuous with home.
+Sky and ground match the original `Playing` state so the transition into
+Grasslands adventures feels continuous with home.
 
 ## Pool encounters
 

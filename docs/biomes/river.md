@@ -5,15 +5,16 @@ encounters today: one fish, one hazard. Lower-variety than grasslands by
 design (the river ticket scoped 1-3 encounters and the design session
 landed at 2).
 
-## Colors
+## Colors & Presentation
 
 - Sky: `DawnBringers16.LightBlue`
 - Ground: `DawnBringers16.Blue`
+- Bird pose: `Sitting` (frame 1) — the bird floats in the river during encounters.
 
-Inherited from the biome-info-pattern ticket; not re-designed here. River
-shares its sky with grasslands (continuity) and uses the brightest blue
-ground on the 16-color palette. `Waterfall` currently shares the same
-pair — a future biome ticket may differentiate.
+Sky and ground inherited from the biome-info-pattern ticket; not
+re-designed here. River shares its sky with grasslands (continuity) and
+uses the brightest blue ground on the 16-color palette. `Waterfall`
+currently shares the same pair — a future biome ticket may differentiate.
 
 ## Pool encounters
 
@@ -34,27 +35,34 @@ encounter has to be perilous.
 
 ### Rapids
 
-Fast water. Currently a **single-option encounter** — see deferral note
-below.
+Fast water. Two options: hold the line, or bail out across biomes.
 
 | Option | Outcomes |
 |---|---|
 | Avoid rocks | Flavor "Avoided them." · EndAdventure "Hit a rock. Limped home." |
+| Swim to shore | ReplaceSteps "Washed ashore." → `[Jungle, Beach]` |
 
-A 50/50 risk on the one option: either thread the rocks cleanly, or get
-slammed and end the adventure early. Mirrors the `GiantToad` / `FightSquirrel`
-risk shape (one flavor, one end-adventure) — pure "real fight, you might
-lose" framing, even though the "opponent" here is the river itself.
+**Avoid rocks** is the 50/50 risk option: thread the rocks cleanly, or
+get slammed and end the adventure early. Mirrors the `GiantToad` /
+`FightSquirrel` risk shape (one flavor, one end-adventure) — pure "real
+fight, you might lose" framing, even though the "opponent" here is the
+river itself.
 
-> **Deferred**: a second option "Swim to shore" — a single outcome that
-> replaces the rest of the adventure with a `[Jungle, Beach]` sub-adventure.
-> This needs a biome-shift outcome mechanic that doesn't exist yet (see
-> `docs/tickets/biome-umbra.md` for the parallel `BiomeShiftOutcome`
-> work, and `docs/tickets/rapids-swim-to-shore.md` for the follow-up that
-> appends this option once T6's resolver and the shift-outcome record
-> land). Until then, Rapids is single-option. This deviates from the
-> river ticket's "≥2 options per encounter" Acceptance Criterion — an
-> explicit user-approved divergence, not an oversight.
+**Swim to shore** is Rapids' **biome-shift waypoint**: a single outcome
+that clears the post-Rapids tail of the current adventure and replaces
+it with a fresh two-step detour — a jungle encounter followed by a
+beach encounter, each rolled uniformly from that biome's pool at apply
+time. Mechanically analogous to the way Mushrooms is grasslands'
+shift-to-Umbra waypoint, except the destination here is two pool
+biomes in sequence rather than a single secret biome. The encounter
+rolls happen at *apply* time, not at outcome construction, preserving
+the anti-save-scum invariant — once committed, the new sub-adventure
+is persisted before the player can quit.
+
+This biome-shift effect is implemented as
+`ReplaceStepsOutcome(string Text, IReadOnlyList<Biome> Biomes)` — a
+sibling to `BiomeShiftOutcome` in the outcome hierarchy. The two
+records can be unified later if a third caller appears with overlap.
 
 ## Design rationale notes
 
@@ -72,15 +80,10 @@ lose" framing, even though the "opponent" here is the river itself.
 - **No retreat-style option on either encounter.** Neither river encounter
   ships an end-adventure escape; grasslands `Snake` / `LoneTree` also
   lack one. Authoring convention is retreat options are *common*, not
-  guaranteed. Rapids felt a poor fit — "fleeing rapids" overlaps
-  semantically with "Swim to shore" (the deferred option), so leaving an
-  escape off today keeps the design coherent when the second option lands.
-- **Single-option Rapids is a knowing AC violation.** River ticket's
-  Acceptance Criteria say "1-3 encounters, each with at least 2 options."
-  Rapids ships with one option because the intended second option needs
-  a mechanic deferred to a follow-up ticket. Captured here so it's
-  visible to the next reader. The single option still has two outcomes,
-  so the ≥1-outcome invariant is intact.
+  guaranteed. Rapids stays escape-free because "Swim to shore" already
+  occupies the bail-out slot — it's a *biome-shift* escape rather than
+  an end-adventure escape, but it serves the same "get me out of here"
+  narrative beat.
 - **Text length budget.** All `DisplayName` / outcome `Text` strings
   sized for 128 px / 6×8 font (~17–21 chars around the bird). Tightest
   string today: "Hit a rock. Limped home." at 24 chars — borderline,

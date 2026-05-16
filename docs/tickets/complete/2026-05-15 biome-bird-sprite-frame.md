@@ -92,3 +92,22 @@ Future per-biome design docs should include the pose line in their Colors / Pres
 - [ ] Inspect the rendered position: the sitting bird's center is still where the standing bird's center was (no vertical jump between biomes within an adventure). `BirdSprite.Draw` centers on `centerX/centerY`; both frames have the same sprite dimensions, so this should be free — sanity-check anyway.
 - [ ] Spot-check `Biome.Waterfall` and `Biome.Lagoon` pose values match Open Decisions 1 & 2 outcomes (debug session: call `.GetInfo().BirdFrame` on each).
 - [ ] Confirm `Playing` (home state) is unchanged — bird still renders via `WanderingBirdView` / `BirdSprite.Draw`'s default `frame: 0`. No accidental coupling.
+
+## Learnings
+
+### Architectural decisions
+- **Open Decision 1 — Beach pose**: chose `Standing`. Yellow sand ground does not read as water; "toes in water" semantics belong to the explicit water biomes (River, Waterfall, Lagoon).
+- **Open Decision 2 — Waterfall pose**: chose `Sitting` (default). Ground color is `Blue` (plunge pool), matching River. If a future design clearly wants "bird perched above the falls looking down", a one-line flip in `BiomeExtensions.Info` covers it.
+- **Open Decision 3 — frame-1 documented role**: chose (a) — reframe frame 1 as a multi-purpose "sitting" pose available for future idle/sleep states. Cheaper than reserving a hypothetical frame 2.
+- **Open Decision 4 — enum location**: kept `BirdFrame` in `DoodleBird/Biomes/` next to `BiomeInfo`. The enum's purpose today is biome metadata; if a non-biome consumer (home idle/sleep) ever appears, promotion is a trivial move.
+- **Open Decision 5 — biome-doc layout**: renamed each touched biome doc's "Colors" section to "Colors & Presentation" and added a "Bird pose:" bullet under it. Keeps biome-visual decisions co-located.
+- **Enum values explicitly assigned `= 0` / `= 1`** even though the defaults would have been the same. Pins the contract that `(int)BirdFrame` matches the sprite-sheet frame index, so the `(int)biomeInfo.BirdFrame` cast at the draw site does not need a translation table. Comment on the enum records the alignment.
+- **Did not change `BirdSprite.Draw`'s signature** to take `BirdFrame` instead of `int`. The `WanderingBirdView` / `Playing` callers pass the default `0`; pushing the enum down would either force them to import biome metadata they don't use or require an overload — neither is justified for this ticket's scope.
+
+### Interesting tidbits
+- The project's namespace / folder is `DoodleBird` even though the ticket text consistently says `PetDoodle/`. The two refer to the same project; the rename has not propagated through the design-doc/ticket prose. Worth a one-shot doc-sweep at some point but not in scope here.
+- `BiomeInfo` being a sealed positional record + `BiomeExtensions.Info` being explicit per-entry construction means adding a property is genuinely compiler-enforced across all 9 biomes. The static-ctor `.Count` check is a belt-and-braces guard for enum-vs-dictionary drift, not for new-property coverage — the latter is the compiler's job already. Worked exactly as the prerequisite ticket designed it to.
+- Test suite is one (1) test today. Build was the load-bearing verifier here.
+
+### Verification gaps
+- Visual / runtime Test Plan items (steps 2–5) were not executed in this implementation pass — they require launching the game. Static code inspection confirms the wiring (`Adventuring.Draw` passes `(int)biomeInfo.BirdFrame`; River/Waterfall/Lagoon entries carry `BirdFrame.Sitting`; all other entries carry `BirdFrame.Standing`). User to confirm visually.
