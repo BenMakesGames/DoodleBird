@@ -1,0 +1,27 @@
+using BenMakesGames.MonoGame.Palettes;
+using BenMakesGames.PlayPlayMini.Services;
+
+namespace DoodleBird.UI;
+
+public sealed record OptionButton(
+    int X,
+    int Y,
+    int Width,
+    int Height,
+    string Label,
+    Action Action
+): IButton
+{
+    public void Draw(GraphicsManager graphics, bool isActive)
+    {
+        var color = isActive ? DawnBringers16.LightBlue : DawnBringers16.Blue;
+
+        var font = graphics.Fonts["Font"];
+        var textWidth = font.ComputeWidth(Label);
+        var textX = X + (Width - textWidth) / 2;
+        var blockHeight = font.MaxCharacterHeight + 2;
+        var textY = Y + (Height - blockHeight) / 2;
+        graphics.DrawText("Font", textX, textY, Label, color);
+        graphics.DrawFilledRectangle(textX, textY + font.MaxCharacterHeight + 1, textWidth, 1, color);
+    }
+}

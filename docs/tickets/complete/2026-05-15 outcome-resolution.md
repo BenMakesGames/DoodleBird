@@ -130,3 +130,38 @@ All other save sites already exist from T4. Don't add more.
 - [ ] Quit during `ShowingOutcome` (within the 2.5s window). Relaunch. The save reflects the **pre-outcome** state — the current step is unchanged (because no mutation happens until the outcome applies). Timer state is not persisted; on reload, the game starts the step fresh (back in `ChoosingOption` with a fresh 5s timer + fresh random default). Confirms the anti-save-scum boundary: the outcome roll itself isn't persisted, but once it's applied, save reflects it.
 - [ ] Add a new sealed derived record to the `Outcome` hierarchy in a temporary edit (e.g. `sealed record TestOutcome(...) : Outcome(...)`) and an `EncounterOption` referencing it. Confirm the `default: throw new UnreachableException()` arm fires at runtime when the test outcome rolls. Revert the test edit.
 - [ ] Eyeball at least one `SubstituteOutcome` chain (encounter A substitutes to B; B's options can resolve normally). Confirm the chain ends naturally with a `FlavorOutcome` (or further substitution that eventually ends).
+
+## Learnings
+
+### Architectural decisions
+
+- **Phase-as-gate, not per-call guard.** All three of `Input` / `Update` / `FixedUpdate` / `Draw` already gate on `CurrentPhase` (or switch on it). No per-method bool flags. `FireOption` flips phase to `ShowingOutcome` before returning, so re-entry in the same `FixedUpdate` accumulator cycle naturally lands in `TickOutcome` instead of re-firing the option.
+- **`PendingOutcome` cleared *before* `ApplyOutcome`.** Same `GameStateManager.ChangeState` deferral hazard as T5: `EndAdventureOutcome` queues a state change but Adventuring's `FixedUpdate` can still run additional iterations in the same cycle. `TickOutcome` guards on `PendingOutcome is null` at the top — once cleared, subsequent iterations no-op. No `OutcomeRemainingSeconds` reset trick needed; null-out is sufficient and reads more obviously.
+- **Switch statement, not switch expression** (Open Decision 4 default). Each arm is a statement (`ResolveCurrentStep()` etc.), so the statement form reads natural. `default: throw new UnreachableException("Unhandled Outcome subtype: " + outcome.GetType().Name)` includes the type name in the message for fast diagnosis when a new derived record forgets a switch arm. Compiler does not enforce exhaustiveness on sealed-record hierarchies; the runtime throw is the safety net.
+- **Outcome text placed at the old option row** (Open Decision 2 default). `y = OptionRowY + (OptionRowHeight - font.MaxCharacterHeight) / 2`; `x` centered. Same vertical band as the option buttons, so the eye doesn't track. Centered horizontally regardless of length — overflow on >128px text is a follow-up if it occurs.
+- **Outcome countdown silent** (Open Decision 3 default). The option timer is meaningful (player can intervene); the outcome timer isn't (no input accepted). The 5s timer text is gated on `ChoosingOption` along with the option buttons.
+- **`Random.Shared.Next(option.Outcomes)` via `BenMakesGames.RandomHelpers`** — picks the element directly. T5 picked an *index* because it then needed to map element → button; T6 just needs the element, so the extension's element-pick is the cleaner shape. Added `using BenMakesGames.RandomHelpers;` to `Adventuring`.
+
+### Problems encountered
+
+- **Re-entry NRE risk on `EndAdventureOutcome`** — described above under "Architectural decisions". The mitigation (null-out `PendingOutcome` before `ApplyOutcome`) was easy to overlook; without it, the second FixedUpdate iteration would call `ApplyOutcome(PendingOutcome!)` on a null target. Guard at top of `TickOutcome` makes the safety explicit.
+- **Switch-section variable scope** in `Adventuring.Draw`. C# switch sections share scope; declaring `var timerText` in the `ChoosingOption` arm and `var outcomeWidth` in the `ShowingOutcome` arm only works because identifier names don't collide. Worth knowing for future arms: pick unique names or wrap each arm in `{ }`.
+
+### Workarounds / limitations
+
+- **Long outcome text overflows 128px.** Some authored outcomes ("Flapped home with a feather missing!" etc.) exceed viewport width at 6px font. No wrap, no truncate — out-of-scope per ticket §Scope. Cosmetic limitation; revisit if a designer hits readability complaints.
+- **Outcome text only — no encounter name during ShowingOutcome would be ambiguous?** Encounter name continues to render in `ShowingOutcome` (above the bird sprite). Ticket §Implementation §4 / AC didn't strictly require either way; keeping it gives the player context for what they just resolved. If it reads cluttered in playtest, easy to gate later.
+
+### Related areas affected
+
+- `DoodleBird/GameStates/Adventuring.cs` — only file changed. Phase enum extended, `FireOption` rewired, new methods `TickOutcome`, `ApplyOutcome`, `SubstituteCurrentEncounter`, `TickOptionTimer` split out of `FixedUpdate`.
+- No new files. No `IButton`/`ButtonList` changes (T5's ctor overload already supports the fresh-default reset on substitute via `EnterCurrentStep`).
+- No changes to `Outcome` hierarchy, `EncounterOption`, `Encounter` enum, or `AdventureStep` — all consumed as-is.
+- No tests added; behavior is UI/runtime-heavy and the existing single Adventuring test was sufficient (it still passes).
+
+### Rejected alternatives
+
+- **`bool TimerFired` flag for outcome re-entry guard.** Same shape T5 rejected for the option timer. Same reasoning: nulling `PendingOutcome` is the natural state transition, no new field to keep in sync.
+- **Resetting `OutcomeRemainingSeconds` to a large value before `ApplyOutcome`** (T5's belt-and-suspenders style). Considered; the null-guard subsumes it and reads cleaner. T5 needed the reset because `RemainingSeconds = 5f` mattered for the next step's timer, whereas `OutcomeRemainingSeconds` is purely an internal countdown with no external consumer.
+- **Per-outcome display duration field on `Outcome`.** Open Decision 1 explicitly defaults to fixed `OutcomeDisplaySeconds = 2.5f`. YAGNI until a designer asks for "this big result should linger longer".
+- **Switch expression `_ = outcome switch { … }`** vs switch statement. Expression form reads worse when arms are statements; default is the statement form per Open Decision 4.

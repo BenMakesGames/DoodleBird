@@ -119,3 +119,40 @@ In `Adventuring.Draw`, after option buttons, before `Mouse.Draw`:
 - [ ] Click any option on a multi-step adventure mid-flight. Confirm the placeholder `FireOption` resolves the current step (next step's encounter shows). Full retreat-via-EndAdventureOutcome behavior lands with T6.
 - [ ] Quit during a countdown. Relaunch — same encounter restored (`save.json` step list unchanged); timer resets to `5.0` (transient, not persisted); fresh random default picked.
 - [ ] Instrument `SaveService.Save` to log — confirm one log line per step resolve, retreat, and adventure end. No per-frame logging.
+
+## Learnings
+
+### Architectural decisions
+
+- **`ButtonList` ctor chained** rather than duplicating init. Old `ButtonList(gsm, cursor, buttons)` now chains into the new `(…, initialActive)` overload via a tiny `RequireFirst(buttons)` helper that re-throws the empty-buttons `ArgumentException`. Single init path, no copy-paste.
+- **Random default picked by index, not by element-then-IndexOf.** Open Decision 5 suggested `Random.Shared.Next(options)` (the `BenMakesGames.RandomHelpers` overload). Picking the *index* directly via the built-in `Random.Shared.Next(int)` is equivalent uniform distribution and avoids an `Array.IndexOf` lookup to map element → button. Same effect, simpler. No new `using BenMakesGames.RandomHelpers` import in `Adventuring`.
+- **Phase enum introduced now** (Open Decision 1 default). Single value (`ChoosingOption`); `Input` / `Update` / `FixedUpdate` all gate on `CurrentPhase != Phase.ChoosingOption ? return`. Today every guard is a no-op, but T6 just adds the second arm — no retrofit.
+- **`OptionButton` mirrors `LinkLabel` styling exactly** (Open Decision 6 default). Same color contrast, same centered-label + underline draw. The only structural difference: no static `Create…` factories — encounter row layout is computed by `Adventuring` since per-slot X is a function of slot count + viewport width.
+- **Re-entry guard in `FireOption`**: `RemainingSeconds = OptionTimerSeconds` is set *before* calling `ResolveCurrentStep`. Belt-and-suspenders for the `EndAdventureOutcome` path — see "Problems encountered" below.
+
+### Problems encountered
+
+- **`GameStateManager.ChangeState` is deferred, not immediate.** `SwitchState()` runs at the *top* of the next `Update` cycle (`GameStateManager.cs:120`). Within the same cycle, multiple `FixedUpdate` iterations can still run on the old state (`GameStateManager.cs:144-154`). Without a guard, this sequence is possible:
+  1. `FixedUpdate` ticks `RemainingSeconds` to `<= 0` → `Buttons.Active.Action()` → `FireOption` → `ResolveCurrentStep` → `EndAdventure` (which sets `GameData.CurrentAdventure = null` and queues state change).
+  2. The `while (FixedUpdateAccumulator >= FixedTimestepMs)` loop runs *another* iteration before the cycle ends → `RemainingSeconds` is still `<= 0` → `Buttons.Active.Action()` fires *again* → `ResolveCurrentStep` throws on the `CurrentAdventure is not { }` guard.
+  Fix: `FireOption` sets `RemainingSeconds = OptionTimerSeconds` before calling `ResolveCurrentStep`. The non-end path then calls `EnterCurrentStep` which sets it to `5f` again — same value, no harm. The end path retains the `5f`, preventing a second fire.
+- **`ButtonList.Input(true)` can override `initialActive` immediately** if the cursor happens to be hovering a button at construction (`ButtonList.Input` sets `Hovered` and then `Active = Hovered` whenever `Hovered is not null`). Acceptable: player intent (hovering) reasonably wins over a random default. Ticket explicitly OKs this ("Sets `Active = initialActive` before the initial `Input(true)` call"). No code path attempts to suppress the hover override.
+
+### Workarounds / limitations
+
+- **Option row layout vs. viewport at 128×32.** Options sit at `Y=22, Height=10` along the bottom, equal-width slots `(Graphics.Width - 4) / N`. Several authored labels are wider than their slot (e.g. `"Crawl through"` is 78px, slot for 3 options is ~41px). Label text overflows neighbor slots visually. Ticket flagged this as "Implementer eyeballs spacing for 1-4 options" — accepted as known cosmetic limitation. Cleanup is a follow-up if it becomes a real readability problem (truncate, abbreviate authored labels, or vertical layout).
+- **Option row overlaps bird sprite.** Bird occupies roughly `y=12..27` (15-tall sprite, feet on ground at `y=26`); option row starts at `y=22`. Lower-left options visually clip the bird's feet. Same accept-as-cosmetic call; the design doc explicitly leaves "Background pictures, ground textures, decorations" out of scope, so the visual cramping is consistent with the spartan first-cut UI.
+- **`Buttons` field is `null!`-initialised** in `Adventuring` because it's assigned in `EnterCurrentStep` (called from the ctor). C# constructor flow can't prove the field is non-null after the indirect call without the `null!` forgiveness. The runtime guarantee is held by ctor → `EnterCurrentStep` being unconditional.
+
+### Rejected alternatives
+
+- **`bool TimerFired` flag** to prevent timer re-fire after expiry. Ticket explicitly steered away ("don't set a `TimerFired` flag — rely on `Action()` mutating `CurrentAdventure` and rebuilding the `ButtonList`"). Rejected: the deferred-`ChangeState` window means rebuild-doesn't-happen-for-EndAdventure-path, so *something* has to gate re-fire. Chose to reset `RemainingSeconds` instead of introducing a new field — same effect, no new state to keep in sync.
+- **Duplicate `ButtonList` ctor init block** instead of chaining. Considered, but two copies of "validate buttons.Count, assign fields, Input(true)" invites drift. Tiny `RequireFirst` helper preserves the original `ArgumentException` for the no-arg case while keeping init in one place.
+- **`Random.Shared.Next(options)` via `BenMakesGames.RandomHelpers`** (Open Decision 5 default). Rejected in favor of `Random.Shared.Next(slotCount)` (built-in, no extra `using`). The extension's value-add — picking an element — was negated because we need the *index* to identify the matching button. Picking-index-directly is the same uniform distribution.
+
+### Related areas affected
+
+- `DoodleBird/UI/ButtonList.cs` — new ctor overload; existing ctor now delegates. Behavior identical for existing callers.
+- `DoodleBird/UI/OptionButton.cs` — new file. Sibling to `LinkLabel`, same shape.
+- `DoodleBird/GameStates/Adventuring.cs` — rewritten around `EnterCurrentStep` / `FireOption` / `Phase`. `ResolveCurrentStep` now calls `EnterCurrentStep` on the non-last-step path (previously did nothing).
+- No tests added — Adventuring's behavior is UI/runtime-heavy. `dotnet test` still passes the existing single test.

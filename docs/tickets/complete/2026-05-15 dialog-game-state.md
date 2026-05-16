@@ -85,3 +85,34 @@ Override and leave empty. Add a one-line comment explaining the intentional no-o
   - After the timer elapses, the game transitions into `Playing` (bird wandering) exactly once.
 - [ ] Test with a longer string (~60 chars) — confirm duration scales (~3.6 s) and the action still fires exactly once.
 - [ ] Revert the `Startup` patch — `Dialog` should remain unreferenced after this ticket.
+
+## Learnings
+
+### Architectural decisions
+- **Countdown timer in seconds** (Open Decision 4, default kept). Mirrors `Startup.TTL -= gameTime.ElapsedGameTime.TotalSeconds`. Duration computed once in ctor as `Math.Max(MinDurationMs, Text.Length * MsPerChar) / 1000.0`.
+- **Tuning constants `MsPerChar = 60` / `MinDurationMs = 1500`** at top of file (Open Decision 1, default). Top-of-file so they're easy to nudge during manual playtest without hunting through method bodies.
+- **Text color `DawnBringers16.LightGray`** (Open Decision 2). `DialogBorder.png` interior is near-black, so light foreground reads cleanly; matches `Startup`'s tip text. Easy to swap if the border art changes.
+- **Text layout: `Startup`'s exact centering math** (Open Decision 3, starting point). `Text.Split('\n')` → `longestLine * 6` width, `lines.Length * 9` height, `(Graphics.Width - TextWidth) / 2` / `(Graphics.Height - TextHeight) / 2`. `DrawText` accepts the raw `\n`-bearing string — no per-line draw loop needed (`Startup.Draw` confirms this idiom). Manual playtest may nudge if the border has asymmetric padding.
+- **`Fired` bool + early-return in `Update`** (Constraint). Once `OnComplete` is invoked, `Update` returns immediately — no further countdown work, no risk of re-invocation even if the `Action` doesn't transition states. Pit-of-success against the one-shot constraint.
+- **Empty `Input` override** kept (not strictly required — base `AbstractGameState.Input` is already a no-op). Mirrors `Playing.Input`'s explicit empty override; signals "input intentionally not consulted" at the file level.
+
+### Problems encountered
+- None. Single-file state, no DI changes beyond the ctor's existing `GraphicsManager`/`MouseManager`, asset already wired into `.mgcb`.
+
+### Interesting tidbits
+- **`DrawText` natively handles `\n`** — passing a multi-line string draws each line with PlayPlayMini's default vertical spacing (9px at font height 8 + spacing 1, per the `FontSheetMeta("Graphics/Font", 6, 8) { VerticalSpacing = 1 }` registration in `Program.cs`). The `lines.Length * 9` height math is the inverse of that — keep them in sync if the font ever changes.
+- **`AbstractGameState` defaults** (`PlayPlayMini/GameState.cs:20-62`): every lifecycle hook (`Input`, `Update`, `FixedUpdate`, `Draw`, `Enter`, `Leave`) is a virtual no-op. Override only what's needed; no abstract members.
+
+### Workarounds / limitations
+- **Test Plan is fully manual.** Build is clean (0 errors; the `NETSDK1194` warning is solution-level `-o` flag, unrelated to code), tests pass. But every Test Plan item requires launching the MonoGame window and the temporary `Startup` patch — needs a human run-through to verify dialog timing, text legibility, input-skip immunity, and exact-once `OnComplete` invocation.
+
+### Related areas affected
+- `Pictures.cs` — gained `DialogBorder` constant.
+- `Program.cs` — gained `new PictureMeta(Pictures.DialogBorder)` registration (not pre-loaded; matches `TopGrass`).
+- Future ticket will wire `Dialog` into a caller (likely `Adventuring` outcome reveals or `Startup` tip handoff) — `DialogConfig`'s `Action OnComplete` is the contract for that wiring.
+
+### Rejected alternatives
+- **Accumulator (`elapsed += ...`) instead of countdown** (Open Decision 4 alt). Rejected per default; either works, but countdown matches `Startup` and keeps the "is it done yet?" check as a simple `TTL <= 0` comparison.
+- **Per-line `DrawText` loop**. Rejected — `Startup.Draw` proves `DrawText` already handles `\n`; a loop would be parallel-structure noise.
+- **"Press any key to dismiss" input path**. Explicitly forbidden by the ticket; `Input` stays empty.
+- **`Graphics.Clear` before `DrawPicture`**. Explicitly forbidden — `DialogBorder.png` ships its own background fill at exact screen dimensions (128×32).

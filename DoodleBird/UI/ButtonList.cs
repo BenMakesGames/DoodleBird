@@ -16,16 +16,32 @@ public class ButtonList
     public ButtonList(
         GameStateManager gsm, MouseManager cursor,
         IList<IButton> buttons
+    ) : this(gsm, cursor, buttons, RequireFirst(buttons))
+    {
+    }
+
+    public ButtonList(
+        GameStateManager gsm, MouseManager cursor,
+        IList<IButton> buttons, IButton initialActive
     )
     {
         if (buttons.Count == 0)
             throw new ArgumentException("ButtonList requires at least one button.", nameof(buttons));
+        if (!buttons.Contains(initialActive))
+            throw new ArgumentException("initialActive must be one of the provided buttons.", nameof(initialActive));
 
         Buttons = buttons;
-        Active = buttons[0];
+        Active = initialActive;
         Cursor = cursor;
         GSM = gsm;
         Input(true);
+    }
+
+    private static IButton RequireFirst(IList<IButton> buttons)
+    {
+        if (buttons.Count == 0)
+            throw new ArgumentException("ButtonList requires at least one button.", nameof(buttons));
+        return buttons[0];
     }
 
     public void Input(bool forceUpdate = false)

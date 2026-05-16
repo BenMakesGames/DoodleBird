@@ -29,6 +29,7 @@ gsmBuilder
         new PictureMeta(Pictures.Cursor, preLoaded: true),
 
         new PictureMeta(Pictures.TopGrass),
+        new PictureMeta(Pictures.DialogBorder),
         new SpriteSheetMeta(Pictures.Bird, 15, 15),
 
         // new FontMeta(...)
