@@ -2,6 +2,10 @@ An idle pet game about a flightless bird.
 
 The bird wanders around its home. Every so often it sets off on an **adventure** — a short sequence of biomes (grasslands, river, jungle, cave, mountain, beach, etc.), one encounter per biome. You can steer its choices, or let it pick for itself.
 
+Runs on Windows, Mac, or Linux.
+
+> [🧚 **Hey, listen!** You can support my development of open-source software on Patreon](https://www.patreon.com/BenMakesGames)
+
 #### How to develop
 
 1. Clone/download this project
