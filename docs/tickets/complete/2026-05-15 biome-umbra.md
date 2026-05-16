@@ -158,3 +158,126 @@ Mirror the per-biome design-doc pattern (see how `docs/biomes/grasslands.md` lan
 - [ ] Confirm `Biome.Umbra.GetInfo().PossibleEncounters.Length >= 1` at startup (debugger / breakpoint). Confirm `Biome.Umbra` is **not** referenced by any template in `AdventureGenerator.Templates` (i.e. Umbra is reachable only via shift).
 - [ ] Eyeball each Umbra encounter's option labels and outcome texts for 128 px fit at 6×8 font.
 - [ ] Inspect `save.json` shape after a shift: `CurrentAdventure.RemainingSteps` is a fresh list of `(Umbra, <encounter>)` pairs; the pre-shift steps are gone.
+
+## Learnings
+
+### Architectural decisions
+
+- **Reused `ReplaceStepsOutcome` instead of authoring a parallel
+  `BiomeShiftOutcome` record.** Between the ticket landing and
+  implementation, the rapids-swim-to-shore ticket landed
+  `ReplaceStepsOutcome(Text, IReadOnlyList<Biome>)` along with its
+  `Adventuring.ApplyOutcome` arm and `ReplaceRemainingSteps` helper.
+  That record is strictly more general than the ticket's proposed
+  `BiomeShiftOutcome(Text, Biome, int StepCount)` — `[Biome.Umbra,
+  Biome.Umbra]` gives the same effect as `(Biome.Umbra, 2)` would, and
+  cross-biome lists like `[Jungle, Beach]` are also expressible.
+  Two outcome records doing the same job would be a pit-of-failure
+  (two arms in the switch, two authoring surfaces, identical apply
+  semantics). Surfaced to user; user confirmed reuse.
+- **Open Decision 1 (T6 prereq).** T6 (`Adventuring.ApplyOutcome`
+  switch with `UnreachableException` default) had already landed, so
+  the prereq was satisfied before this ticket started. No data-only
+  fallback needed.
+- **Open Decision 2 (payload shape).** Resolved by the reuse decision
+  above: `ReplaceStepsOutcome`'s shape (b-ish — fully-specified biome
+  sequence, encounter rolled at apply time) wins over the ticket's
+  proposed (a) (`Biome + StepCount`). All three Umbra triggers ship
+  `[Biome.Umbra, Biome.Umbra]` literally.
+- **Open Decision 4 (Umbra colors).** Pink sky / DarkPurple ground —
+  user-selected over the ticket's default DarkPurple/Black. Chosen for
+  saturated-unreal contrast; Pink is otherwise unused as any biome's
+  sky and DarkPurple is otherwise unused as any biome's ground, which
+  reinforces "this is somewhere else." Rationale captured in
+  `docs/biomes/umbra.md`.
+- **Open Decision 5 (encounter roster).** User-supplied via
+  `encounters.md` desktop file: Lost Spirit (Help / Ignore), Dark River
+  (Fish / Search shore), Magic Library (Browse). Three pool encounters,
+  not the ticket's default of two. `HungrySpirit` substitute target
+  (referenced from `LostSpirit.Help`) was specified in a follow-up
+  question per the design-session memory rule about asking for
+  undefined substitute targets.
+- **AC violation: Magic Library is single-option.** AC #6 requires
+  "≥2 options" per encounter; Magic Library ships with one (Browse,
+  50/50 flavor). User-driven — same shape of knowing AC violation as
+  river `Rapids` / cave `GlowingMushrooms` (pre-this-ticket) / jungle
+  `Quicksand`. The single option still has a non-empty `Outcomes[]`
+  (two outcomes), so the data-model invariant holds. Captured in
+  `docs/biomes/umbra.md` design rationale.
+- **Umbra not in any `AdventureGenerator.Templates` entry.** Per ticket
+  scope, Umbra is reachable only via `ReplaceStepsOutcome` from three
+  trigger encounters (grasslands `Mushrooms.Eat one`, cave
+  `GlowingMushrooms.Eat`, jungle `NanerBird.Listen`). First "secret"
+  biome — discovered, not rolled.
+- **Recursive shifts (Umbra → other biomes) deliberately not authored.**
+  Out of scope per ticket. None of the three Umbra pool encounters
+  ships a `ReplaceStepsOutcome`; the only end-adventure carrier in
+  Umbra is the substitute-only `HungrySpirit`.
+
+### Problems encountered
+
+- **`ReplaceStepsOutcome` already existed mid-ticket.** Initial reading
+  of the ticket showed `BiomeShiftOutcome` as a new record to author.
+  After completing the design alignment with the user, attempting to
+  add `BiomeShiftOutcome` to `Outcome.cs` failed because the file had
+  been modified — `ReplaceStepsOutcome` was already there from the
+  rapids-swim-to-shore commit landed in parallel. Re-reading caught
+  this; surfaced the overlap to user; user pivoted to reuse. Lesson:
+  re-read every code anchor file at implementation time, not just at
+  Phase 1 orient — parallel work can change the substrate.
+
+### Interesting tidbits
+
+- The 6×8 font / 21-char outcome text budget is well-established
+  across all biome design docs. Picking text was a constraint-driven
+  exercise — `"Trippy! To the Umbra"` (20 chars) and `"Wobble! Umbra
+  calls."` (20 chars) both sit right at the borderline.
+- `[Umbra, Umbra]` as a literal pair in three different
+  `ReplaceStepsOutcome` calls is a slight smell — if the StepCount-2
+  default ever changes, all three call sites need editing. YAGNI says
+  leave it; if more shift triggers land, a `[..Umbra * 2]` helper or
+  named constant could clean it up. Not worth it for three call sites.
+
+### Workarounds / limitations
+
+- Test Plan items requiring runtime verification (game launch, mid-Umbra
+  quit/relaunch, save.json inspection, eyeball text fit) cannot be
+  exercised in this implementation pass — flagged for user verification.
+  The build + test pass and the static-ctor sanity checks (Biome
+  count + non-empty Outcomes) cover the data-model invariants.
+- AC #4 ("`BiomeShiftOutcome` derived record exists") is technically
+  unmet by the literal text — no `BiomeShiftOutcome` record was
+  authored. The user-confirmed reuse of `ReplaceStepsOutcome` is the
+  intended substitute; the *behavioral* AC (Umbra shift fires from
+  three trigger encounters) is met.
+- AC #11 ("`ApplyOutcome` arm for `BiomeShiftOutcome`") similarly N/A
+  — the `ReplaceStepsOutcome` arm landed by the rapids ticket is what
+  resolves the Umbra shifts.
+
+### Related areas affected
+
+- `docs/biomes/grasslands.md`, `docs/biomes/cave.md`,
+  `docs/biomes/jungle.md` — all three updated to remove the
+  Umbra-shift deferral notes and document the now-shipped outcomes.
+- `docs/biomes/umbra.md` — new design doc covering aesthetic, encounter
+  set, color rationale, and design rationale notes.
+
+### Rejected alternatives
+
+- **Authoring `BiomeShiftOutcome` anyway.** User briefly approved this
+  via the AskUserQuestion dialog (initial misclick), then corrected
+  to reuse `ReplaceStepsOutcome`. Rejected for redundancy — two
+  outcome records doing the same job is a pit-of-failure under the
+  CLAUDE.md "principle of least surprise" + "YAGNI / KISS" guidance.
+- **Open Decision 2 (a) literal: `(Biome, StepCount)` shape.** Strictly
+  less general than `ReplaceStepsOutcome(Text, IReadOnlyList<Biome>)`.
+  No use case where (a)'s shape is preferable.
+- **Open Decision 4 ground = Black.** Ticket default; passed over for
+  Pink-sky/DarkPurple-ground per user choice. Black ground would have
+  read more like a void / underworld; Pink/DarkPurple reads more
+  candy-trippy / dreamlike — better matches Umbra's "the mushrooms
+  hit" framing.
+- **Larger Umbra roster (3 pool encounters → could have been 2).** User
+  supplied 3 encounters via `encounters.md` rather than the ticket
+  default of 2. Rejected default in favor of user-driven count.
+  Trivially upgradable; no tradeoff.

@@ -81,6 +81,7 @@ public static class EncounterExtensions
                     [
                         new FlavorOutcome("Tasty!"),
                         new FlavorOutcome("Bitter. Yuck!"),
+                        new ReplaceStepsOutcome("Trippy! To the Umbra", [Biome.Umbra, Biome.Umbra]),
                     ],
                 },
                 new EncounterOption
@@ -241,6 +242,11 @@ public static class EncounterExtensions
             [Encounter.GlowingMushrooms] = new("Glowing Mushrooms", [
                 new EncounterOption
                 {
+                    Label = "Eat",
+                    Outcomes = [new ReplaceStepsOutcome("Trippy! To the Umbra", [Biome.Umbra, Biome.Umbra])],
+                },
+                new EncounterOption
+                {
                     Label = "Ignore",
                     Outcomes = [new FlavorOutcome("Hopped past.")],
                 },
@@ -340,7 +346,11 @@ public static class EncounterExtensions
                 new EncounterOption
                 {
                     Label = "Listen",
-                    Outcomes = [new FlavorOutcome("Words made no sense.")],
+                    Outcomes =
+                    [
+                        new FlavorOutcome("Words made no sense."),
+                        new ReplaceStepsOutcome("Wobble! Umbra calls.", [Biome.Umbra, Biome.Umbra]),
+                    ],
                 },
                 new EncounterOption
                 {
@@ -463,6 +473,78 @@ public static class EncounterExtensions
                 {
                     Label = "Ignore",
                     Outcomes = [new FlavorOutcome("Hopped past.")],
+                },
+            ]),
+
+            [Encounter.LostSpirit] = new("Lost Spirit", [
+                new EncounterOption
+                {
+                    Label = "Help",
+                    Outcomes =
+                    [
+                        new FlavorOutcome("Guided home."),
+                        new SubstituteOutcome("A trick!", Encounter.HungrySpirit),
+                    ],
+                },
+                new EncounterOption
+                {
+                    Label = "Ignore",
+                    Outcomes = [new FlavorOutcome("Hopped past.")],
+                },
+            ]),
+
+            [Encounter.DarkRiver] = new("Dark River", [
+                new EncounterOption
+                {
+                    Label = "Fish",
+                    Outcomes =
+                    [
+                        new FlavorOutcome("Beautiful catch!"),
+                        new FlavorOutcome("Awful catch!"),
+                        new FlavorOutcome("Caught nothing."),
+                    ],
+                },
+                new EncounterOption
+                {
+                    Label = "Search shore",
+                    Outcomes =
+                    [
+                        new FlavorOutcome("Found two coins!"),
+                        new FlavorOutcome("Found nothing."),
+                    ],
+                },
+            ]),
+
+            [Encounter.MagicLibrary] = new("Magic Library", [
+                new EncounterOption
+                {
+                    Label = "Browse",
+                    Outcomes =
+                    [
+                        new FlavorOutcome("Confusing books."),
+                        new FlavorOutcome("Fascinating books!"),
+                    ],
+                },
+            ]),
+
+            [Encounter.HungrySpirit] = new("Hungry Spirit", [
+                new EncounterOption
+                {
+                    Label = "Feed",
+                    Outcomes =
+                    [
+                        new FlavorOutcome("Sated. Hopped past."),
+                        new EndAdventureOutcome("Chased. Home."),
+                    ],
+                },
+                new EncounterOption
+                {
+                    Label = "Intimidate",
+                    Outcomes =
+                    [
+                        new FlavorOutcome("Spirit fled."),
+                        new EndAdventureOutcome("Attacked. Home."),
+                    ],
                 },
             ]),
         }.ToFrozenDictionary();

@@ -68,10 +68,10 @@ Climbing is a coin-flip between a freebie ("Found bananas!" — flavor
 only, no inventory yet) and a fight. Tree's design intent: a low-cost
 gamble compared to Hollow Log's three-way roulette.
 
-> **Deferred**: a third "Eat one" outcome on Mushrooms that triggers a
-> biome shift into the Umbra biome. Captured in `docs/tickets/biome-umbra.md`.
-> Once that ticket lands, climb-the-tree → bananas could similarly chain
-> into wackier substitutes.
+> **Future expansion**: Mushrooms now ships the trippy Umbra-shift
+> outcome (delivered by the biome-umbra ticket). Climb-the-tree →
+> bananas could similarly chain into wackier substitutes if a design
+> need surfaces.
 
 ## Substitute-only encounters
 
@@ -84,13 +84,15 @@ Reached from Hollow Log → Crawl through. Bird found a mushroom patch.
 
 | Option | Outcomes |
 |---|---|
-| Eat one | Flavor "Tasty!" · Flavor "Bitter. Yuck!" |
+| Eat one | Flavor "Tasty!" · Flavor "Bitter. Yuck!" · ReplaceSteps "Trippy! To the Umbra" → [Umbra, Umbra] |
 | Hop away | Flavor "Hopped away." |
 
-Currently safe on both branches. The "Trippy" outcome that biome-shifts
-to Umbra is **deferred** to the biome-umbra ticket — it requires a new
-`Outcome` derived record (`BiomeShiftOutcome` or similar) which doesn't
-exist yet.
+Eat one is a 33/33/33 roll: tasty flavor, bitter flavor, or a shift into
+a 2-step Umbra sub-adventure (the "trippy" outcome). The Umbra shift
+landed via the biome-umbra ticket; it reuses `ReplaceStepsOutcome`
+(originally introduced for rapids `Swim to shore`) rather than a
+parallel `BiomeShiftOutcome` record. Hop away is the deterministic safe
+pass.
 
 ### Giant Toad
 

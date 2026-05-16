@@ -19,24 +19,22 @@ palette match for cave floor / rock.
 
 ### Glowing Mushrooms
 
-A cluster of bioluminescent mushrooms. Currently a **single-option
-encounter** — see deferral note below.
+A cluster of bioluminescent mushrooms. Two options across the engage /
+ignore spread.
 
 | Option | Outcomes |
 |---|---|
+| Eat | ReplaceSteps "Trippy! To the Umbra" → [Umbra, Umbra] |
 | Ignore | Flavor "Hopped past." |
 
-> **Deferred**: an "Eat" option that **always** ships the bird into the
-> Umbra biome — Glowing Mushrooms are intrinsically trippy, unlike
-> grasslands `Mushrooms` where "Eat" is a coin-flip and only one outcome
-> shifts. Needs the `BiomeShiftOutcome` record + `Biome.Umbra` content +
-> resolver wiring from `docs/tickets/biome-umbra.md`. When that ticket
-> lands, "Eat" gets appended as a single-outcome Engage option whose only
-> outcome is a `BiomeShiftOutcome` targeting Umbra. Until then, Glowing
-> Mushrooms is single-option. This deviates from the cave ticket's
-> "≥2 options per encounter" Acceptance Criterion — an explicit
-> user-approved divergence, captured here and in the biome-umbra ticket's
-> scope.
+Eat is a deterministic shift into a 2-step Umbra sub-adventure — its
+single outcome is a `ReplaceStepsOutcome` targeting Umbra. Unlike
+grasslands `Mushrooms` where "Eat one" is a 33/33/33 roll between safe
+flavor and the trippy shift, cave Glowing Mushrooms eats *always* trip
+(matches the design intent: glowing mushrooms are intrinsically more
+potent). Ignore is the canonical deterministic safe pass. The
+biome-umbra ticket added the Eat option; reuses `ReplaceStepsOutcome`
+rather than a parallel `BiomeShiftOutcome` record.
 
 ### Giant Bat
 
@@ -88,18 +86,11 @@ fills that slot.
   (e.g. Boulder → DisturbedColony substitute, Bat → BatSwarm), but
   shipping flat keeps the surface narrow.
 - **Glowing Mushrooms is the cave equivalent of grasslands `Mushrooms`
-  but with a sharper rule.** Grasslands mushrooms: eating is a coin-flip
-  between safe and trippy. Cave glowing mushrooms: eating is *always*
-  trippy. The cave variant intentionally has fewer outcomes per option
-  (1 vs. 3) to encode that determinism. Ignore is the only ship-today
-  option because the always-trippy Eat needs the deferred biome-shift
-  mechanic.
-- **Single-option Glowing Mushrooms is a knowing AC violation.** Cave
-  ticket Acceptance Criteria says "each with at least 2 options." Same
-  shape of deferral as river's Rapids — single-option ships today, the
-  follow-up ticket (biome-umbra) appends the second option. The single
-  option still has a non-empty `Outcomes[]`, so the data-model invariant
-  holds.
+  but with a sharper rule.** Grasslands mushrooms: eating is a 33/33/33
+  roll between two safe flavors and the trippy Umbra shift. Cave glowing
+  mushrooms: eating is *always* trippy (single-outcome shift). The cave
+  variant intentionally has fewer outcomes on Eat (1 vs. 3) to encode
+  that determinism.
 - **Giant Bat's `Sneak around` is the first three-outcome "don't engage"
   option in the codebase.** Most don't-engage options in other biomes are
   single-outcome safe passes. Sneak's variance is intentional —

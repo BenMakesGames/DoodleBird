@@ -28,4 +28,8 @@ public enum Encounter
     WaterfallDrop,
     Mermaid,
     Thunderstorm,
+    LostSpirit,
+    DarkRiver,
+    MagicLibrary,
+    HungrySpirit,
 }

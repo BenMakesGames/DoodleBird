@@ -21,6 +21,7 @@ public static class BiomeExtensions
             [Biome.Waterfall]    = new("Waterfall",     DawnBringers16.LightBlue, DawnBringers16.Blue,      [Encounter.WaterfallDrop],                                                                      BirdFrame.Sitting),
             [Biome.Beach]        = new("Beach",         DawnBringers16.LightBlue, DawnBringers16.Yellow,    [Encounter.Sandcastle, Encounter.PurpleSeaweed, Encounter.AggressiveSeagull],                   BirdFrame.Standing),
             [Biome.Lagoon]       = new("Lagoon",        DawnBringers16.LightBlue, DawnBringers16.DarkBlue,  [Encounter.MusclyTrout, Encounter.Mermaid],                                                     BirdFrame.Sitting),
+            [Biome.Umbra]        = new("Umbra",         DawnBringers16.Pink,      DawnBringers16.DarkPurple,[Encounter.LostSpirit, Encounter.DarkRiver, Encounter.MagicLibrary],                            BirdFrame.Standing),
         }.ToFrozenDictionary();
 
         if (Info.Count != Enum.GetValues<Biome>().Length)

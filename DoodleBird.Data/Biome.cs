@@ -11,4 +11,5 @@ public enum Biome
     Waterfall,
     Beach,
     Lagoon,
+    Umbra,
 }

@@ -105,22 +105,15 @@ nonsense. Two options.
 
 | Option | Outcomes |
 |---|---|
-| Listen | Flavor "Words made no sense." |
+| Listen | Flavor "Words made no sense." · ReplaceSteps "Wobble! Umbra calls." → [Umbra, Umbra] |
 | Ignore | Flavor "Ate naners. Tasty!" |
 
-Listen ships single-outcome today. Both options are essentially safe
-flavor — Naner Bird is a *curiosity* encounter, not a fight or hazard,
-which is the design intent. The Ignore option deliberately turns the
-sub-quest into a reward (the bird steals naners from underneath the
-Naner Bird's perch).
-
-> **Deferred**: a second outcome on `Listen` that ships the bird to
-> Umbra via `BiomeShiftOutcome`. Mirrors grasslands `Mushrooms` /
-> cave `GlowingMushrooms` deferral. Needs the `BiomeShiftOutcome`
-> record + `Biome.Umbra` content from `docs/tickets/biome-umbra.md`.
-> When that ticket lands, Listen gains the second outcome
-> ("Transported to Umbra" or similar) and Listen becomes a 50/50 between
-> safe flavor and an Umbra shift. Until then, Listen is single-outcome.
+Listen is a 50/50 between a flavor speed-bump and a 2-step Umbra
+sub-adventure shift (the babble was a portal in disguise). Ignore is
+the deterministic reward — the bird steals naners from underneath the
+Naner Bird's perch. The Umbra-shift outcome landed via the biome-umbra
+ticket; reuses `ReplaceStepsOutcome` rather than a parallel
+`BiomeShiftOutcome` record.
 
 ## Design rationale notes
 
