@@ -10,5 +10,5 @@ The bird wanders around its home. Every so often it sets off on an **adventure**
    * This project comes with Claude skills to help you work on the project:
 4. Write a "ticket" with Claude: `/create-ticket <describe the feature you want here>`
    * Claude will ask clarifying questions; if you don't understand what it's asking you, ask it to explain
-5. Implement the ticket: `/implment-ticket <whatever name the ticket ended up with>`
+5. Implement the ticket: `/implement-ticket <whatever name the ticket ended up with>`
 6. Run the game to check the work (if you don't know how, ask Claude :P)
