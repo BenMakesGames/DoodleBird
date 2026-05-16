@@ -24,9 +24,6 @@ public sealed class Adventuring: GameState<AdventuringConfig>
     private const int OptionRowSideMargin = 2;
     private const int TimerTopMargin = 1;
     private const int TimerRightMargin = 2;
-    private const float OutcomeDisplaySeconds = 2.5f;
-
-    private enum Phase { ChoosingOption, ShowingOutcome }
 
     private GraphicsManager Graphics { get; }
     private GameStateManager GSM { get; }
@@ -37,9 +34,6 @@ public sealed class Adventuring: GameState<AdventuringConfig>
 
     private ButtonList Buttons = null!;
     private float RemainingSeconds;
-    private Phase CurrentPhase = Phase.ChoosingOption;
-    private Outcome? PendingOutcome;
-    private float OutcomeRemainingSeconds;
 
     public Adventuring(
         AdventuringConfig config,
@@ -67,52 +61,19 @@ public sealed class Adventuring: GameState<AdventuringConfig>
 
     public override void Input(GameTime gameTime)
     {
-        if (CurrentPhase != Phase.ChoosingOption)
-            return;
-
         Buttons.Input();
     }
 
     public override void Update(GameTime gameTime)
     {
-        if (CurrentPhase != Phase.ChoosingOption)
-            return;
-
         Buttons.Update(this);
     }
 
     public override void FixedUpdate(GameTime gameTime)
     {
-        switch (CurrentPhase)
-        {
-            case Phase.ChoosingOption:
-                TickOptionTimer(gameTime);
-                break;
-            case Phase.ShowingOutcome:
-                TickOutcome(gameTime);
-                break;
-        }
-    }
-
-    private void TickOptionTimer(GameTime gameTime)
-    {
         RemainingSeconds -= (float)gameTime.ElapsedGameTime.TotalSeconds;
         if (RemainingSeconds <= 0f)
             Buttons.Active.Action();
-    }
-
-    private void TickOutcome(GameTime gameTime)
-    {
-        if (PendingOutcome is null)
-            return;
-
-        OutcomeRemainingSeconds -= (float)gameTime.ElapsedGameTime.TotalSeconds;
-        if (OutcomeRemainingSeconds > 0f)
-            return;
-
-        var outcome = PendingOutcome;
-        PendingOutcome = null;
-        ApplyOutcome(outcome);
     }
 
     public override void Draw(GameTime gameTime)
@@ -133,23 +94,12 @@ public sealed class Adventuring: GameState<AdventuringConfig>
         var textY = birdCenterY - font.MaxCharacterHeight / 2;
         Graphics.DrawText("Font", textX, textY, CurrentStep.Encounter.GetInfo().DisplayName, DawnBringers16.White);
 
-        switch (CurrentPhase)
-        {
-            case Phase.ChoosingOption:
-                Buttons.Draw(Graphics);
+        Buttons.Draw(Graphics);
 
-                var timerText = $"{MathF.Max(RemainingSeconds, 0f):0.0}";
-                var timerWidth = font.ComputeWidth(timerText);
-                var timerX = Graphics.Width - timerWidth - TimerRightMargin;
-                Graphics.DrawText("Font", timerX, TimerTopMargin, timerText, DawnBringers16.White);
-                break;
-            case Phase.ShowingOutcome when PendingOutcome is { } outcome:
-                var outcomeWidth = font.ComputeWidth(outcome.Text);
-                var outcomeX = (Graphics.Width - outcomeWidth) / 2;
-                var outcomeY = OptionRowY + (OptionRowHeight - font.MaxCharacterHeight) / 2;
-                Graphics.DrawText("Font", outcomeX, outcomeY, outcome.Text, DawnBringers16.White);
-                break;
-        }
+        var timerText = $"{MathF.Max(RemainingSeconds, 0f):0.0}";
+        var timerWidth = font.ComputeWidth(timerText);
+        var timerX = Graphics.Width - timerWidth - TimerRightMargin;
+        Graphics.DrawText("Font", timerX, TimerTopMargin, timerText, DawnBringers16.White);
 
         Mouse.Draw(this);
     }
@@ -179,63 +129,47 @@ public sealed class Adventuring: GameState<AdventuringConfig>
         Buttons = new ButtonList(GSM, Mouse, buttons, buttons[defaultIndex]);
 
         RemainingSeconds = OptionTimerSeconds;
-        CurrentPhase = Phase.ChoosingOption;
     }
 
     private void FireOption(EncounterOption option)
     {
-        PendingOutcome = Random.Shared.Next(option.Outcomes);
-        OutcomeRemainingSeconds = OutcomeDisplaySeconds;
-        CurrentPhase = Phase.ShowingOutcome;
+        var outcome = Random.Shared.Next(option.Outcomes);
+        GSM.ChangeState<Dialog, DialogConfig>(new(outcome.Text, () => ApplyOutcome(outcome)));
     }
 
     private void ApplyOutcome(Outcome outcome)
     {
+        if (GameData.CurrentAdventure is not { } adventure)
+            throw new InvalidOperationException("CurrentAdventure became null while applying outcome.");
+
         switch (outcome)
         {
             case FlavorOutcome:
-                ResolveCurrentStep();
+                adventure.RemainingSteps.RemoveAt(0);
+                if (adventure.RemainingSteps.Count == 0)
+                {
+                    GameData.CurrentAdventure = null;
+                    SaveService.Save(GameData);
+                    GSM.ChangeState<Playing, PlayingConfig>(new(GameData));
+                }
+                else
+                {
+                    SaveService.Save(GameData);
+                    GSM.ChangeState<Adventuring, AdventuringConfig>(new(GameData));
+                }
                 break;
             case SubstituteOutcome s:
-                SubstituteCurrentEncounter(s.NewEncounter);
+                adventure.RemainingSteps[0] = new AdventureStep(adventure.RemainingSteps[0].Biome, s.NewEncounter);
+                SaveService.Save(GameData);
+                GSM.ChangeState<Adventuring, AdventuringConfig>(new(GameData));
                 break;
             case EndAdventureOutcome:
-                EndAdventure();
+                GameData.CurrentAdventure = null;
+                SaveService.Save(GameData);
+                GSM.ChangeState<Playing, PlayingConfig>(new(GameData));
                 break;
             default:
                 throw new UnreachableException($"Unhandled Outcome subtype: {outcome.GetType().Name}");
         }
-    }
-
-    private void SubstituteCurrentEncounter(Encounter newEncounter)
-    {
-        if (GameData.CurrentAdventure is not { } adventure)
-            throw new InvalidOperationException("CurrentAdventure became null while in Adventuring state.");
-
-        var currentBiome = CurrentStep.Biome;
-        adventure.RemainingSteps[0] = new AdventureStep(currentBiome, newEncounter);
-        SaveService.Save(GameData);
-        EnterCurrentStep();
-    }
-
-    private void ResolveCurrentStep()
-    {
-        if (GameData.CurrentAdventure is not { } adventure)
-            throw new InvalidOperationException("CurrentAdventure became null while in Adventuring state.");
-
-        adventure.RemainingSteps.RemoveAt(0);
-        SaveService.Save(GameData);
-
-        if (adventure.RemainingSteps.Count == 0)
-            EndAdventure();
-        else
-            EnterCurrentStep();
-    }
-
-    private void EndAdventure()
-    {
-        GameData.CurrentAdventure = null;
-        SaveService.Save(GameData);
-        GSM.ChangeState<Playing, PlayingConfig>(new(GameData));
     }
 }

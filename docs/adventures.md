@@ -140,17 +140,27 @@ those systems land.
 - The encounter timer's remaining time is drawn top-right, formatted to
   0.1s precision.
 
-### Adventuring phases
+### Outcome reveal flow
 
-`Adventuring` operates as a small state machine:
+`Adventuring` itself has no internal phase machine. While `Adventuring`
+is active, buttons render and the 5-second option timer ticks. On option
+fire (click or timer expiry), `Adventuring` rolls the outcome and
+transitions to the `Dialog` game state, passing the outcome's text and
+an `OnComplete` callback. `Dialog` shows the text for a duration scaled
+to its length, ignores all input, and on expiry invokes the callback.
+The callback applies the rolled outcome:
 
-| Phase | What happens |
-|---|---|
-| `ChoosingOption` | Buttons rendered, timer ticks down. Player click or timer expiry → fire selected option → roll its outcome → transition to `ShowingOutcome`. |
-| `ShowingOutcome` | Outcome text rendered (no buttons). Auto-advance after a fixed delay (~2–3s) applies the outcome's effect: flavor → resolve step; substitute → swap encounter and return to `ChoosingOption`; end-adventure → clear adventure and return to `Playing`. |
+- flavor → remove the current step, save, then re-enter `Adventuring`
+  (or return to `Playing` if no steps remain);
+- substitute → replace the current step's encounter with the
+  substitute, save, re-enter `Adventuring`;
+- end-adventure → clear `CurrentAdventure`, save, return to `Playing`.
 
-The phase enum is the canonical source of "what's on screen and how do
-clicks behave". Tick logic and draw logic both gate on it.
+Re-entering `Adventuring` reruns its ctor, which calls
+`EnterCurrentStep` — fresh buttons, fresh random default, fresh 5s
+timer for whatever step is now at index 0. The outcome roll itself is
+transient: mutation and save happen only when the callback fires, so
+quitting during the `Dialog` reveal preserves the pre-roll state.
 
 ## Persistence
 

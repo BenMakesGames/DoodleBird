@@ -94,3 +94,40 @@ Edit §Adventuring phases: either drop the phases table (no longer a state machi
 - [ ] Quit during a Dialog reveal. Relaunch. The save reflects the **pre-outcome** step (mutation only happens in `OnComplete`). `Adventuring` re-enters with the original encounter, fresh 5s timer, fresh random default.
 - [ ] Chain test: encounter A's option rolls a `SubstituteOutcome` to encounter B; B's option rolls a `FlavorOutcome`. Both dialogs appear in sequence; adventure advances past A's slot once B resolves.
 - [ ] Grep confirms no remaining references to `Phase.ShowingOutcome`, `OutcomeRemainingSeconds`, `OutcomeDisplaySeconds`, `PendingOutcome`, or `TickOutcome` in `Adventuring.cs`.
+
+## Learnings
+
+### Architectural decisions
+
+- **`ApplyOutcome` kept as a method, helpers inlined** (Open Decisions 1 + 2 defaults, then a step further). The outcome-resolution ticket had `ResolveCurrentStep` / `SubstituteCurrentEncounter` / `EndAdventure` as named private methods because they were called from multiple seams (ctor flow, substitute re-enter, outcome dispatch). After this rewrite every effect arm has exactly one caller — `ApplyOutcome` — and the arm bodies collapse to two or three lines (mutate, save, `GSM.ChangeState`). Inlining beats three single-use helpers; the switch reads as a flat list of effects.
+- **`Phase` enum deleted** (Open Decision 3 default). With outcome reveal living in `Dialog`, the only remaining `Adventuring` state is "buttons up, timer ticking". Single-value enums are deferred premature structure; YAGNI says delete and re-add when a second phase appears.
+- **Re-entry via `GSM.ChangeState<Adventuring, AdventuringConfig>(new(GameData))`** rather than mutating in-place. The substitute path used to mutate `RemainingSteps[0]` and call `EnterCurrentStep()` on the same instance; now that mutation is followed by a state change. The ctor reads the mutated `GameData` and rebuilds from scratch — fresh buttons, fresh default, fresh 5s timer. No per-arm helper, no second `EnterCurrentStep` call path.
+- **`OnComplete` closure captures `this` implicitly via `ApplyOutcome`.** `Dialog` discards `Adventuring`, but the lambda holds the captured `Adventuring` reference alive; calling `ApplyOutcome(outcome)` on it works because the method's body only touches captured services (`GameData`, `SaveService`, `GSM`), not lifecycle position. The defunct `Adventuring` instance is GC'd once `OnComplete` runs and the closure dies.
+- **Flavor-end path consolidated to a single save.** The old `ResolveCurrentStep` + `EndAdventure` chain saved twice on the last step (remove-and-save, then null-and-save). The inlined arm checks `RemainingSteps.Count == 0` after the `RemoveAt` and saves once — either after nulling `CurrentAdventure` (end) or with the step removed (advance). One write per state transition.
+
+### Problems encountered
+
+None. The rewrite was a pure reshape; the outcome-resolution ticket's exhaustive switch idiom carried over unchanged, just with the arm bodies changed from "mutate in place" to "mutate + save + ChangeState".
+
+### Interesting tidbits
+
+- The save-scum boundary is enforced for free by the new structure: the outcome roll happens in `FireOption` *before* the `Dialog` transition, and the rolled `Outcome` is captured only by the closure — it never lives on `GameData`. Quitting during the `Dialog` reveal serializes only the pre-roll state (matches `RemainingSteps[0]` unchanged); the closure dies with the process, so on relaunch the encounter is re-entered fresh.
+- `Dialog` is unaware that its caller is `Adventuring`. Future callers can pass any `Action` — chain dialogs (`new(textA, () => GSM.ChangeState<Dialog, DialogConfig>(new(textB, finalAction)))`), end-of-flow handoffs, etc. The `OnComplete` contract is the only coupling.
+
+### Workarounds / limitations
+
+- **No animated transition between `Adventuring` and `Dialog`** — out of scope per ticket. The state swap is a frame-perfect cut. Cosmetic only; if it reads jarring in playtest, add a fade in either state or a wrapper transition state.
+- **Long outcome text still overflows 128px in `Dialog`.** Out of scope here; same limitation noted in `outcome-resolution.md`'s Learnings. `Dialog` has its own centering math which behaves the same as the old inline render.
+
+### Related areas affected
+
+- `DoodleBird/GameStates/Adventuring.cs` — only file changed. Significant deletions (`Phase` enum, `PendingOutcome`, `OutcomeRemainingSeconds`, `OutcomeDisplaySeconds`, `TickOutcome`, `SubstituteCurrentEncounter`, `ResolveCurrentStep`, `EndAdventure` helpers, all phase-gate `if`s in lifecycle hooks, the `Draw` switch). Net: shorter file, flatter control flow.
+- `docs/adventures.md` — §Adventuring phases replaced with §Outcome reveal flow describing the `Adventuring` ⇄ `Dialog` cross-state choreography.
+- No `Dialog` changes (out of scope; it's a plain consumer of the existing `DialogConfig` contract).
+- No test changes — behavior is UI/runtime-heavy and the single existing test still passes.
+
+### Rejected alternatives
+
+- **Lambda-inlined effect dispatch** instead of `() => ApplyOutcome(outcome)`. Considered (Open Decision 1 alt). Lambda body would have been the same switch with the same arms — strictly worse readability and harder to unit-test should that ever be wanted. Kept `ApplyOutcome` as a named method per Decision 1/2 defaults.
+- **Keeping `Phase` enum as a single-value placeholder.** Open Decision 3 alt. Rejected per default; YAGNI. The `CurrentPhase != Phase.ChoosingOption` gates and the `switch` in `FixedUpdate` were the only consumers, and they all became trivial after the deletion.
+- **Retaining `ResolveCurrentStep` / `EndAdventure` / `SubstituteCurrentEncounter` as named helpers.** Considered explicitly in ticket §2 ("implementer's call"). Rejected because each is called from exactly one site after this rewrite; inlining into the switch arms keeps the effect description local to the dispatch.
