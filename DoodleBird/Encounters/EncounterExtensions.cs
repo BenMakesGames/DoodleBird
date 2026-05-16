@@ -14,7 +14,7 @@ public static class EncounterExtensions
             [Encounter.HollowLog] = new("Hollow Log", [
                 new EncounterOption
                 {
-                    Label = "Crawl through",
+                    Label = "Explore",
                     Outcomes =
                     [
                         new FlavorOutcome("Nothing inside."),
@@ -24,7 +24,7 @@ public static class EncounterExtensions
                 },
                 new EncounterOption
                 {
-                    Label = "Jump over",
+                    Label = "Jump",
                     Outcomes =
                     [
                         new FlavorOutcome("Cleared it!"),
@@ -33,7 +33,7 @@ public static class EncounterExtensions
                 },
                 new EncounterOption
                 {
-                    Label = "Roll it away",
+                    Label = "Push",
                     Outcomes =
                     [
                         new FlavorOutcome("Rolled it away!"),
@@ -46,7 +46,7 @@ public static class EncounterExtensions
             [Encounter.Snake] = new("Snake", [
                 new EncounterOption
                 {
-                    Label = "Go around",
+                    Label = "Avoid",
                     Outcomes = [new FlavorOutcome("Wide berth given.")],
                 },
                 new EncounterOption
@@ -59,7 +59,7 @@ public static class EncounterExtensions
             [Encounter.LoneTree] = new("Lone Tree", [
                 new EncounterOption
                 {
-                    Label = "Climb it",
+                    Label = "Climb",
                     Outcomes =
                     [
                         new FlavorOutcome("Found bananas!"),
@@ -68,7 +68,7 @@ public static class EncounterExtensions
                 },
                 new EncounterOption
                 {
-                    Label = "Ignore it",
+                    Label = "Ignore",
                     Outcomes = [new FlavorOutcome("Hopped past.")],
                 },
             ]),
@@ -76,7 +76,7 @@ public static class EncounterExtensions
             [Encounter.Mushrooms] = new("Mushrooms", [
                 new EncounterOption
                 {
-                    Label = "Eat one",
+                    Label = "Eat",
                     Outcomes =
                     [
                         new FlavorOutcome("Tasty!"),
@@ -86,7 +86,7 @@ public static class EncounterExtensions
                 },
                 new EncounterOption
                 {
-                    Label = "Hop away",
+                    Label = "Ignore",
                     Outcomes = [new FlavorOutcome("Hopped away.")],
                 },
             ]),
@@ -94,7 +94,7 @@ public static class EncounterExtensions
             [Encounter.GiantToad] = new("Giant Toad", [
                 new EncounterOption
                 {
-                    Label = "Peck at it",
+                    Label = "Peck!",
                     Outcomes =
                     [
                         new FlavorOutcome("Toad hopped off."),
@@ -111,7 +111,7 @@ public static class EncounterExtensions
             [Encounter.FightSquirrel] = new("Fight Squirrel", [
                 new EncounterOption
                 {
-                    Label = "Peck",
+                    Label = "Peck!",
                     Outcomes =
                     [
                         new FlavorOutcome("Squirrel fled."),
@@ -120,7 +120,7 @@ public static class EncounterExtensions
                 },
                 new EncounterOption
                 {
-                    Label = "Glide to surface",
+                    Label = "Glide away",
                     Outcomes = [new FlavorOutcome("Glided down.")],
                 },
             ]),
@@ -149,7 +149,7 @@ public static class EncounterExtensions
                     Outcomes =
                     [
                         new FlavorOutcome("Avoided them."),
-                        new EndAdventureOutcome("Hit a rock. Limped home."),
+                        new EndAdventureOutcome("Ouch! Limped home."),
                     ],
                 },
                 new EncounterOption
@@ -165,7 +165,7 @@ public static class EncounterExtensions
             [Encounter.Sandcastle] = new("Sandcastle", [
                 new EncounterOption
                 {
-                    Label = "Investigate",
+                    Label = "Explore",
                     Outcomes =
                     [
                         new FlavorOutcome("Empty inside."),
@@ -264,7 +264,7 @@ public static class EncounterExtensions
                 },
                 new EncounterOption
                 {
-                    Label = "Sneak around",
+                    Label = "Sneak",
                     Outcomes =
                     [
                         new FlavorOutcome("Slipped past."),
@@ -362,7 +362,7 @@ public static class EncounterExtensions
             [Encounter.LimestoneGolem] = new("Limestone Golem", [
                 new EncounterOption
                 {
-                    Label = "Peck",
+                    Label = "Peck!",
                     Outcomes =
                     [
                         new FlavorOutcome("Golem crumbled."),
@@ -396,7 +396,7 @@ public static class EncounterExtensions
             [Encounter.Griffin] = new("Griffin", [
                 new EncounterOption
                 {
-                    Label = "Sneak past",
+                    Label = "Sneak",
                     Outcomes =
                     [
                         new FlavorOutcome("Slipped past."),
@@ -413,7 +413,7 @@ public static class EncounterExtensions
             [Encounter.WaterfallDrop] = new("Waterfall Drop", [
                 new EncounterOption
                 {
-                    Label = "Ride water down",
+                    Label = "Ride",
                     Outcomes =
                     [
                         new FlavorOutcome("Splashed down!"),
@@ -422,7 +422,7 @@ public static class EncounterExtensions
                 },
                 new EncounterOption
                 {
-                    Label = "Glide down",
+                    Label = "Glide away",
                     Outcomes = [new FlavorOutcome("Glided down.")],
                 },
             ]),
@@ -452,7 +452,7 @@ public static class EncounterExtensions
                 },
                 new EncounterOption
                 {
-                    Label = "Take Shelter",
+                    Label = "Hide",
                     Outcomes = [new FlavorOutcome("Waited it out.")],
                 },
             ]),

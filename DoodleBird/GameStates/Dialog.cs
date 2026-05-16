@@ -10,8 +10,8 @@ public sealed record DialogConfig(string Text, Action OnComplete);
 // sealed classes execute faster than non-sealed, so always seal your game states!
 public sealed class Dialog : GameState<DialogConfig>
 {
-    private const int MsPerChar = 60;
-    private const int MinDurationMs = 1500;
+    private const int MsPerChar = 120;
+    private const int MinDurationMs = 3000;
 
     private GraphicsManager Graphics { get; }
     private MouseManager Mouse { get; }

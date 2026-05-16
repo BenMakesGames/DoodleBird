@@ -1,4 +1,5 @@
 using BenMakesGames.MonoGame.Palettes;
+using BenMakesGames.PlayPlayMini.GraphicsExtensions;
 using BenMakesGames.PlayPlayMini.Services;
 
 namespace DoodleBird.UI;
@@ -21,8 +22,10 @@ public sealed record LinkLabel(
         var textX = X + (Width - textWidth) / 2;
         var blockHeight = font.MaxCharacterHeight + 2;
         var textY = Y + (Height - blockHeight) / 2;
-        graphics.DrawText("Font", textX, textY, Label, color);
-        graphics.DrawFilledRectangle(textX, textY + font.MaxCharacterHeight + 1, textWidth, 1, color);
+        graphics.DrawTextWithOutline("Font", textX, textY, Label, color, DawnBringers16.Black);
+        var underlineY = textY + font.MaxCharacterHeight + 1;
+        graphics.DrawFilledRectangle(textX, underlineY, textWidth, 1, color);
+        graphics.DrawRectangle(textX - 1, underlineY - 1, textWidth + 2, 3, DawnBringers16.Black);
     }
 
     public static LinkLabel CreateBottomRight(GraphicsManager graphics, string label, Action action)

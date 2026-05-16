@@ -17,13 +17,12 @@ public sealed record AdventuringConfig(GameData GameData);
 public sealed class Adventuring: GameState<AdventuringConfig>
 {
     private const int BirdLeftX = 24;
-    private const int EncounterTextGap = 4;
+    private const int EncounterTextTopY = 2;
     private const float OptionTimerSeconds = 5f;
     private const int OptionRowY = 22;
     private const int OptionRowHeight = 10;
     private const int OptionRowSideMargin = 2;
-    private const int TimerTopMargin = 1;
-    private const int TimerRightMargin = 2;
+    private const int TimerBarHeight = 3;
 
     private GraphicsManager Graphics { get; }
     private GameStateManager GSM { get; }
@@ -90,16 +89,15 @@ public sealed class Adventuring: GameState<AdventuringConfig>
         BirdSprite.Draw(Graphics, birdCenterX, birdCenterY, facingRight: true, frame: (int)biomeInfo.BirdFrame);
 
         var font = Graphics.Fonts["Font"];
-        var textX = BirdLeftX + birdSheet.SpriteWidth + EncounterTextGap;
-        var textY = birdCenterY - font.MaxCharacterHeight / 2;
-        Graphics.DrawText("Font", textX, textY, CurrentStep.Encounter.GetInfo().DisplayName, DawnBringers16.White);
+        var encounterName = CurrentStep.Encounter.GetInfo().DisplayName;
+        var textX = (Graphics.Width - font.ComputeWidth(encounterName)) / 2;
+        Graphics.DrawText("Font", textX, EncounterTextTopY, encounterName, DawnBringers16.White);
 
         Buttons.Draw(Graphics);
 
-        var timerText = $"{MathF.Max(RemainingSeconds, 0f):0.0}";
-        var timerWidth = font.ComputeWidth(timerText);
-        var timerX = Graphics.Width - timerWidth - TimerRightMargin;
-        Graphics.DrawText("Font", timerX, TimerTopMargin, timerText, DawnBringers16.White);
+        var fraction = MathF.Max(RemainingSeconds, 0f) / OptionTimerSeconds;
+        var barWidth = (int)(Graphics.Width * fraction);
+        Graphics.DrawFilledRectangle(0, Graphics.Height - TimerBarHeight, barWidth, TimerBarHeight, DawnBringers16.Red);
 
         Mouse.Draw(this);
     }
